@@ -1,0 +1,122 @@
+[
+    {
+        "predicted_total": 9.0,
+        "market_line": 8.5,
+        "edge": 0.5,
+        "recommendation": "NO BET",
+        "game_id": 776591,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 7.28,
+        "market_line": 7.5,
+        "edge": -0.22,
+        "recommendation": "NO BET",
+        "game_id": 776584,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 9.2,
+        "market_line": 7.5,
+        "edge": 1.7,
+        "recommendation": "BET OVER",
+        "game_id": 776581,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 9.18,
+        "market_line": 8.5,
+        "edge": 0.68,
+        "recommendation": "BET OVER",
+        "game_id": 776588,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.22,
+        "market_line": 8.5,
+        "edge": -0.28,
+        "recommendation": "NO BET",
+        "game_id": 776582,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.45,
+        "market_line": 8.5,
+        "edge": -0.05,
+        "recommendation": "NO BET",
+        "game_id": 776585,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 7.53,
+        "market_line": 8.5,
+        "edge": -0.97,
+        "recommendation": "BET UNDER",
+        "game_id": 776583,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.86,
+        "market_line": 8.5,
+        "edge": 0.36,
+        "recommendation": "NO BET",
+        "game_id": 776586,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.47,
+        "market_line": 7.5,
+        "edge": 0.97,
+        "recommendation": "BET OVER",
+        "game_id": 776578,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.77,
+        "market_line": 8.5,
+        "edge": 0.27,
+        "recommendation": "NO BET",
+        "game_id": 776575,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.78,
+        "market_line": 7.5,
+        "edge": 1.28,
+        "recommendation": "BET OVER",
+        "game_id": 776587,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.2,
+        "market_line": 7.5,
+        "edge": 0.7,
+        "recommendation": "BET OVER",
+        "game_id": 776577,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 7.32,
+        "market_line": 7.5,
+        "edge": -0.18,
+        "recommendation": "NO BET",
+        "game_id": 776576,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.73,
+        "market_line": 10.5,
+        "edge": -1.77,
+        "recommendation": "BET UNDER",
+        "game_id": 776573,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    },
+    {
+        "predicted_total": 8.93,
+        "market_line": 8.5,
+        "edge": 0.43,
+        "recommendation": "NO BET",
+        "game_id": 776574,
+        "llm_reasoning": "[LLM error] Error code: 429 - {'error': {'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.', 'type': 'insufficient_quota', 'param': None, 'code': 'insufficient_quota'}}"
+    }
+]

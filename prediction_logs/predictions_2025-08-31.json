@@ -1,0 +1,114 @@
+[
+    {
+        "predicted_total": 8.25,
+        "market_line": 8.5,
+        "edge": -0.25,
+        "recommendation": "NO BET",
+        "game_id": 776527,
+        "llm_reasoning": "Based on the model's prediction of 8.25 total runs compared to the sportsbook's line of 8.5, the slight edge towards the under could be justified by factors such as the home team's slightly lower average runs scored, the favorable wind conditions potentially affecting scoring, and the relatively strong pitching performances from both starting pitchers in terms of ERA and WHIP. These combined factors suggest a slightly lower-scoring game than what the sportsbook line indicates."
+    },
+    {
+        "predicted_total": 9.11,
+        "market_line": 9.5,
+        "edge": -0.39,
+        "recommendation": "NO BET",
+        "game_id": 776525,
+        "llm_reasoning": "The machine learning model's prediction of 9.11 total runs for the Washington Nationals vs. Tampa Bay Rays game falls slightly below the sportsbook's over/under line of 9.5. This difference may be justified by considering the average runs scored by both teams, the starting pitchers' performance metrics, and the neutral wind conditions. The model likely factored in these key elements to arrive at its prediction, indicating a potential edge in favor of the under in this matchup."
+    },
+    {
+        "predicted_total": 7.72,
+        "market_line": 8.5,
+        "edge": -0.78,
+        "recommendation": "BET UNDER",
+        "game_id": 776539,
+        "llm_reasoning": "The machine learning model's prediction of 7.72 total runs for the Boston Red Sox vs. Pittsburgh Pirates game suggests a slightly lower scoring game compared to the sportsbook's over/under line of 8.5. This difference may be influenced by factors such as the home team's recent lower average runs scored in the last 5 games, the away team's inconsistent performance, and the starting pitchers' ERA and WHIP values favoring slightly lower scoring expectations."
+    },
+    {
+        "predicted_total": 9.22,
+        "market_line": 7.5,
+        "edge": 1.72,
+        "recommendation": "BET OVER",
+        "game_id": 776535,
+        "llm_reasoning": "The machine learning model's prediction of 9.22 total runs in the Mets vs. Marlins game suggests a higher-scoring game than the sportsbook's line of 7.5. This difference may be justified by factors such as the high average runs scored by both teams recently, favorable weather conditions for hitting, and the relatively similar ERA/WHIP of the starting pitchers indicating potential for runs on both sides."
+    },
+    {
+        "predicted_total": 8.11,
+        "market_line": 8.5,
+        "edge": -0.39,
+        "recommendation": "NO BET",
+        "game_id": 776536,
+        "llm_reasoning": "The machine learning model's prediction of 8.11 total runs for the Cincinnati Reds vs. St. Louis Cardinals game is slightly below the sportsbook's over/under line of 8.5. This difference may be justified by the home team's recent lower average runs scored in the last 5 games compared to their season average, as well as the away team's starting pitcher having a higher ERA and WHIP than the home team's pitcher. These factors likely influenced the model's prediction and could provide a slight edge in favor of the under in this matchup."
+    },
+    {
+        "predicted_total": 8.97,
+        "market_line": 9.5,
+        "edge": -0.53,
+        "recommendation": "BET UNDER",
+        "game_id": 776531,
+        "llm_reasoning": "The machine learning model's prediction of 8.97 total runs for the Houston Astros vs. Los Angeles Angels game suggests a slightly lower scoring game compared to the sportsbook's over/under line of 9.5. This prediction likely takes into account the teams' recent average runs scored, the starting pitchers' performance metrics, and the favorable wind conditions for hitting. The slight edge towards the under may be justified based on these factors, indicating a potential opportunity for a strategic bet on the under."
+    },
+    {
+        "predicted_total": 8.49,
+        "market_line": 8.5,
+        "edge": -0.01,
+        "recommendation": "NO BET",
+        "game_id": 776530,
+        "llm_reasoning": "The machine learning model's prediction of 8.49 total runs for the Minnesota Twins vs. San Diego Padres game suggests a slightly lower scoring game compared to the sportsbook's over/under line of 8.5. This prediction likely takes into account the home team's consistent scoring performance, the away team's recent fluctuation in runs scored, and the pitching matchup favoring the away team's starter with a lower ERA and WHIP. Overall, the model sees a balanced game with a potential slight underperformance in total runs."
+    },
+    {
+        "predicted_total": 8.44,
+        "market_line": 8.5,
+        "edge": -0.06,
+        "recommendation": "NO BET",
+        "game_id": 776529,
+        "llm_reasoning": "The machine learning model's prediction of 8.44 total runs for the baseball game between the Chicago White Sox and New York Yankees slightly differs from the sportsbook's line of 8.5. This variance could be attributed to the recent high-scoring performances of both teams, the favorable weather conditions, and the starting pitchers' solid ERA/WHIP ratios, indicating a potential edge towards the over due to the offensive capabilities and pitching matchups."
+    },
+    {
+        "predicted_total": 7.98,
+        "market_line": 9.5,
+        "edge": -1.52,
+        "recommendation": "BET UNDER",
+        "game_id": 776528,
+        "llm_reasoning": "The machine learning model's prediction of 7.98 total runs for the Kansas City Royals vs. Detroit Tigers game suggests a potential edge against the sportsbook's over/under line of 9.5. This difference could be influenced by factors such as the recent high-scoring performances of both teams, favorable weather conditions with wind blowing out, and the relatively solid but not elite pitching matchups on both sides. These factors collectively indicate a likelihood of a slightly lower-scoring game than what the sportsbook line suggests."
+    },
+    {
+        "predicted_total": 7.16,
+        "market_line": 7.5,
+        "edge": -0.34,
+        "recommendation": "NO BET",
+        "game_id": 776537,
+        "llm_reasoning": "Based on the model's prediction of 7.16 total runs compared to the sportsbook line of 7.5, the slight edge towards the under could be justified by factors such as the home team's recent lower average runs scored in the last 5 games and the away team's starting pitcher having a relatively lower ERA and WHIP compared to the home team's pitcher. Additionally, the neutral or crosswind conditions might suggest a potential impact on scoring, leading to a slightly lower predicted total runs."
+    },
+    {
+        "predicted_total": 8.05,
+        "market_line": 7.5,
+        "edge": 0.55,
+        "recommendation": "BET OVER",
+        "game_id": 776516,
+        "llm_reasoning": "The machine learning model's prediction of 8.05 total runs for the San Francisco Giants vs. Baltimore Orioles game exceeds the sportsbook's line of 7.5. This edge can be justified by factors such as the high average runs scored by both teams recently, favorable wind conditions for hitting, and the significant difference in ERA/WHIP between the starting pitchers favoring the away team. These combined factors suggest a potentially higher-scoring game than what the sportsbook line indicates."
+    },
+    {
+        "predicted_total": 11.37,
+        "market_line": 10.5,
+        "edge": 0.87,
+        "recommendation": "BET OVER",
+        "game_id": 776526,
+        "llm_reasoning": "The machine learning model's prediction of 11.37 total runs for the Colorado Rockies vs. Chicago Cubs game suggests a potential edge over the sportsbook's line of 10.5. This difference could be influenced by factors such as the high home team average runs, the relatively poor home SP ERA/WHIP, and the neutral wind conditions, all pointing towards a potentially higher-scoring game than what the sportsbook anticipates."
+    },
+    {
+        "predicted_total": 9.21,
+        "market_line": 8.5,
+        "edge": 0.71,
+        "recommendation": "BET OVER",
+        "game_id": 776523,
+        "llm_reasoning": "The machine learning model's prediction of 9.21 total runs for the Dodgers vs. Diamondbacks game suggests a potential edge over the sportsbook's line of 8.5. This difference could be justified by the recent high-scoring performances of both teams, the favorable weather conditions, and the significant contrast in ERA and WHIP between the starting pitchers, with the Dodgers' pitcher having a more favorable record compared to the Diamondbacks' pitcher."
+    },
+    {
+        "predicted_total": 8.7,
+        "market_line": 10.5,
+        "edge": -1.8,
+        "recommendation": "BET UNDER",
+        "game_id": 776524,
+        "llm_reasoning": "The machine learning model's prediction of 8.7 total runs for the Athletics vs. Rangers game suggests a potential under bet compared to the sportsbook's line of 10.5. This prediction takes into account factors such as the home team's recent high average runs scored, the away team's lower average runs scored despite a recent spike, and the contrasting pitching performances of the starting pitchers. The model likely sees the combination of these factors leading to a lower-scoring game than what the sportsbook line indicates."
+    }
+]

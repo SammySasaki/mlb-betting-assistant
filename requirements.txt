@@ -1,0 +1,12 @@
+psycopg2-binary
+sqlalchemy
+alembic
+requests
+pandas
+scikit-learn
+joblib
+openai
+langgraph
+xgboost==1.7.5
+matplotlib
+pybaseball

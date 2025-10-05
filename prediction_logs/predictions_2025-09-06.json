@@ -1,0 +1,107 @@
+[
+    {
+        "predicted_total": 9.46,
+        "market_line": 9.5,
+        "edge": -0.04,
+        "recommendation": "NO BET",
+        "game_id": 776436
+    },
+    {
+        "predicted_total": 8.32,
+        "market_line": 8.5,
+        "edge": -0.18,
+        "recommendation": "NO BET",
+        "game_id": 776440
+    },
+    {
+        "predicted_total": 8.72,
+        "market_line": 7.5,
+        "edge": 1.22,
+        "recommendation": "BET OVER",
+        "game_id": 776433
+    },
+    {
+        "predicted_total": 7.75,
+        "market_line": 7.5,
+        "edge": 0.25,
+        "recommendation": "NO BET",
+        "game_id": 776435
+    },
+    {
+        "predicted_total": 8.26,
+        "market_line": 8.5,
+        "edge": -0.24,
+        "recommendation": "NO BET",
+        "game_id": 776439
+    },
+    {
+        "predicted_total": 6.65,
+        "market_line": 7.5,
+        "edge": -0.85,
+        "recommendation": "BET UNDER",
+        "game_id": 776441
+    },
+    {
+        "predicted_total": 9.08,
+        "market_line": 7.5,
+        "edge": 1.58,
+        "recommendation": "BET OVER",
+        "game_id": 776443
+    },
+    {
+        "predicted_total": 8.34,
+        "market_line": 8.5,
+        "edge": -0.16,
+        "recommendation": "NO BET",
+        "game_id": 776438
+    },
+    {
+        "predicted_total": 8.57,
+        "market_line": 8.5,
+        "edge": 0.07,
+        "recommendation": "NO BET",
+        "game_id": 776437
+    },
+    {
+        "predicted_total": 7.76,
+        "market_line": 6.5,
+        "edge": 1.26,
+        "recommendation": "BET OVER",
+        "game_id": 776432
+    },
+    {
+        "predicted_total": 7.93,
+        "market_line": 8.5,
+        "edge": -0.57,
+        "recommendation": "BET UNDER",
+        "game_id": 776434
+    },
+    {
+        "predicted_total": 8.37,
+        "market_line": 8.5,
+        "edge": -0.13,
+        "recommendation": "NO BET",
+        "game_id": 776447
+    },
+    {
+        "predicted_total": 9.96,
+        "market_line": 8.5,
+        "edge": 1.46,
+        "recommendation": "BET OVER",
+        "game_id": 776424
+    },
+    {
+        "predicted_total": 12.0,
+        "market_line": 11.5,
+        "edge": 0.5,
+        "recommendation": "NO BET",
+        "game_id": 776431
+    },
+    {
+        "predicted_total": 9.55,
+        "market_line": 9.5,
+        "edge": 0.05,
+        "recommendation": "NO BET",
+        "game_id": 776430
+    }
+]
