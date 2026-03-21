@@ -1,3 +1,19 @@
 .venv/
 *.log
 .env
+.cache/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Trained ML model artifacts
+*.pkl
+*.joblib
+
+# Generated images/plots
+*.png
+*.jpg
+*.jpeg
