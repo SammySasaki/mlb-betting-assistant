@@ -1,0 +1,15 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git
+.gitignore
+.env
+logs
+prediction_logs
+tests
+training
+*.png
+pgdata
+pgadmin-data
+README.md
