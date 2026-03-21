@@ -10,3 +10,6 @@ langgraph
 xgboost==1.7.5
 matplotlib
 pybaseball
+fastapi
+uvicorn[standard]
+streamlit

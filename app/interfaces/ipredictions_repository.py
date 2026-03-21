@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional, List
-from app.db_models import Prediction
+from app.db.models import Prediction
 from datetime import date
 
 

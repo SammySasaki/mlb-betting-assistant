@@ -3,13 +3,15 @@ services:
     image: postgres:14
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: s
-      POSTGRES_DB: sports_betting
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    env_file:
+      - .env
 
   pgadmin:
     image: dpage/pgadmin4
@@ -17,12 +19,14 @@ services:
     ports:
       - "5050:80"
     environment:
-      PGADMIN_DEFAULT_EMAIL: pgadmin@example.com
-      PGADMIN_DEFAULT_PASSWORD: s
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
     depends_on:
       - db
     volumes:
       - pgadmin-data:/var/lib/pgadmin
+    env_file:
+      - .env
 
   app:
     build:
@@ -30,11 +34,27 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - db
-    environment:
-      DATABASE_URL: postgresql://postgres:s@db:5432/sports_betting
-    command: ["sh", "-c", "python infra/db/wait_for_postgres.py && python infra/db/init_db.py"]
+    command: ["sh", "-c", "python infra/db/wait_for_postgres.py && python infra/db/init_db.py && uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload"]
+    ports:
+      - "8000:8000"
     volumes:
       - .:/app
+    env_file:
+      - .env
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - app
+    command: ["streamlit", "run", "ui/home.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    environment:
+      - API_BASE_URL=http://app:8000
     env_file:
       - .env
 

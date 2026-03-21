@@ -2,7 +2,7 @@ import numpy as np
 from sqlalchemy import func, case
 from app.utils.utils import venue_orientations, venue_run_factors
 from typing import List, Optional
-from app.db_models import Game, Player, TeamFeatures, BullpenFeatures, PitcherFeatures
+from app.db.models import Game, Player, TeamFeatures, BullpenFeatures, PitcherFeatures
 from app.interfaces.iplayer_game_stats_repository import IPlayerGameStatsRepository
 from app.interfaces.igame_repository import IGameRepository
 from app.interfaces.ifeatures_repository import IFeaturesRepository

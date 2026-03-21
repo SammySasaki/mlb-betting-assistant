@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, List, Tuple
 from datetime import date
 
-from app.db_models import PlayerGameStats
+from app.db.models import PlayerGameStats
 
 
 class IPlayerGameStatsRepository(ABC):

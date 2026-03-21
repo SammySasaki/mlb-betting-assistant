@@ -1,9 +1,9 @@
-from sqlalchemy import create_engine, text
+import os
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.db_models import Base
+from app.db.models import Base
 
-# Example connection string for local Postgres
-DATABASE_URL = "postgresql://postgres:s@db:5432/sports_betting"
+DATABASE_URL = os.environ["DATABASE_URL"]
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)

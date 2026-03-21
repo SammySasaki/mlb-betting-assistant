@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import date
 from typing import List, Optional
-from app.db_models import Game
+from app.db.models import Game
 
 
 class IGameRepository(ABC):

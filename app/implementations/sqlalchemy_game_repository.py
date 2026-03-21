@@ -2,7 +2,7 @@ from typing import List, Optional
 from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
-from app.db_models import Game
+from app.db.models import Game
 from app.interfaces.igame_repository import IGameRepository
 
 

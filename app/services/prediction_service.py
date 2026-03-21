@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.sql import func
 import joblib
-from app.db_models import Game, Prediction
+from app.db.models import Game, Prediction
 from app.services.feature_extractor import FeatureExtractor
 from app.interfaces.ipredictions_repository import IPredictionRepository
 from app.interfaces.igame_repository import IGameRepository

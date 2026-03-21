@@ -1,5 +1,5 @@
 from openai import OpenAI
-from graph.workflow import build_graph
+from app.graph.workflow import build_graph
 
 app = build_graph()
 

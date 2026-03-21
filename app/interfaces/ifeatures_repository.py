@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from app.db_models import PitcherFeatures, BullpenFeatures, TeamFeatures
+from app.db.models import PitcherFeatures, BullpenFeatures, TeamFeatures
 
 class IFeaturesRepository(ABC):
     @abstractmethod

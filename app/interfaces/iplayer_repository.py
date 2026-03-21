@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from app.db_models import Player
+from app.db.models import Player
 
 class IPlayerRepository(ABC):
     """Repository interface for player name lookup"""

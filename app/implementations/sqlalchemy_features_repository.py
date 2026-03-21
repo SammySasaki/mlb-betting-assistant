@@ -1,6 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from app.db_models import PitcherFeatures, BullpenFeatures, TeamFeatures
+from app.db.models import PitcherFeatures, BullpenFeatures, TeamFeatures
 from app.interfaces.ifeatures_repository import IFeaturesRepository
 
 class SqlAlchemyFeaturesRepository(IFeaturesRepository):

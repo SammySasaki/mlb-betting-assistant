@@ -1,6 +1,6 @@
 from typing import List
 from sqlalchemy.orm import Session
-from app.db_models import Lineups, PlayerGameStats
+from app.db.models import Lineups, PlayerGameStats
 from app.interfaces.iapi_client import IApiClient
 from app.interfaces.ilineup_repository import ILineupRepository
 from app.interfaces.iplayer_game_stats_repository import IPlayerGameStatsRepository

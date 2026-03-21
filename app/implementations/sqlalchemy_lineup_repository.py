@@ -3,7 +3,7 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
-from app.db_models import Lineups, Game
+from app.db.models import Lineups, Game
 from app.interfaces.ilineup_repository import ILineupRepository
 
 

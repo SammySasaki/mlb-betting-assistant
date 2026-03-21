@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import delete
 from datetime import datetime
-from app.db_models import Game
+from app.db.models import Game
 from infra.db.init_db import engine
 
 REGULAR_SEASON_START_DATES = {

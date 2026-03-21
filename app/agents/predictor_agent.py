@@ -12,7 +12,7 @@ import json
 from app.utils.utils import venue_orientations, venue_run_factors
 from infra.db.init_db import SessionLocal
 from sqlalchemy.orm import Session, joinedload
-from app.db_models import Player, PlayerGameStats, Game, Prediction
+from app.db.models import Player, PlayerGameStats, Game, Prediction
 from app.graph.state import GraphState
 from app.utils.utils import _extract_json
 from datetime import datetime

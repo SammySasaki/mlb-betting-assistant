@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import Optional
-from app.db_models import Weather
+from app.db.models import Weather
 from app.interfaces.iweather_repository import IWeatherRepository
 
 class WeatherRepository(IWeatherRepository):

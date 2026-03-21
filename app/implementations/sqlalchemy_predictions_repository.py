@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from typing import Optional
-from app.db_models import Prediction, Game
+from app.db.models import Prediction, Game
 from app.interfaces.ipredictions_repository import IPredictionRepository
 from datetime import date
 from typing import List

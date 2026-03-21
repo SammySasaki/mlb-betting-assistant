@@ -66,6 +66,7 @@ class Player(Base):
     game_stats = relationship("PlayerGameStats", back_populates="player")
     pitcher_features = relationship("PitcherFeatures", back_populates="player")
     lineup_entries = relationship("Lineups", back_populates="player")
+    season_stats = relationship("PlayerSeasonStats", back_populates="player")
 
 class PlayerGameStats(Base):
     __tablename__ = "player_game_stats"
@@ -203,3 +204,50 @@ class UserEvent(Base):
     affected_players = Column(String)  # comma-separated or JSON
     created_by = Column(String)  # "user", "LLM", etc.
     created_at = Column(DateTime)
+
+
+class PlayerSeasonStats(Base):
+    """Pre-aggregated per-player season totals.
+
+    Updated nightly after ingestion so browse/leaderboard queries are fast
+    without scanning raw player_game_stats rows.  Both counting stats and
+    derived rates are stored so future read paths can sort by OPS, ERA, etc.
+    without recomputing them on every request.
+    """
+    __tablename__ = "player_season_stats"
+
+    player_id   = Column(Integer, ForeignKey("players.id"), primary_key=True)
+    season_year = Column(Integer, primary_key=True)
+
+    # Batting counting stats
+    games         = Column(Integer, default=0)
+    at_bats       = Column(Integer, default=0)
+    hits          = Column(Integer, default=0)
+    doubles       = Column(Integer, default=0)
+    triples       = Column(Integer, default=0)
+    home_runs     = Column(Integer, default=0)
+    rbis          = Column(Integer, default=0)
+    runs          = Column(Integer, default=0)
+    walks_batting = Column(Integer, default=0)
+
+    # Batting computed rates
+    avg = Column(Float)
+    obp = Column(Float)
+    slg = Column(Float)
+    ops = Column(Float)
+
+    # Pitching counting stats
+    games_pitched = Column(Integer, default=0)
+    outs_pitched  = Column(Integer, default=0)
+    earned_runs   = Column(Integer, default=0)
+    strikeouts    = Column(Integer, default=0)
+    walks_pitched = Column(Integer, default=0)
+    hits_allowed  = Column(Integer, default=0)
+
+    # Pitching computed rates
+    era  = Column(Float)
+    whip = Column(Float)
+
+    updated_at = Column(DateTime, server_default=func.now())
+
+    player = relationship("Player", back_populates="season_stats")

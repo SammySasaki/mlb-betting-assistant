@@ -1,9 +1,9 @@
 # graph/workflow.py
 from langgraph.graph import StateGraph, END, START
-from agents.classifier_agent import ClassifierAgent
-from agents.stats_agent import StatsAgent
-from agents.predictor_agent import MLBPredictionAgent
-from agents.lineup_agent import LineupAgent
+from app.agents.classifier_agent import ClassifierAgent
+from app.agents.stats_agent import StatsAgent
+from app.agents.predictor_agent import MLBPredictionAgent
+from app.agents.lineup_agent import LineupAgent
 # from agents.reasoning_agent import ReasoningAgent
 # from agents.strategy_agent import StrategyAgent
 import os

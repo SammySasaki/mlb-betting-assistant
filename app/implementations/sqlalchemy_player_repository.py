@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy.orm import Session
 from app.interfaces.iplayer_repository import IPlayerRepository
-from app.db_models import Player
+from app.db.models import Player
 
 class SQLAlchemyPlayerRepository(IPlayerRepository):
     def __init__(self, session: Session):

@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import desc, asc, case, and_, or_, func
 from sqlalchemy.dialects import postgresql
-from app.db_models import Game, Player, PlayerGameStats, Weather
+from app.db.models import Game, Player, PlayerGameStats, Weather
 from app.services.at_bat_service import AtBatService
 import os
 from openai import OpenAI
@@ -11,6 +11,7 @@ from app.graph.state import GraphState
 from app.utils.utils import _extract_json
 from app.interfaces.illm_client import ILLMClient
 from app.implementations.openai_client import OpenAILLMClient
+from app.services.stats_calculator import StatsCalculator
 
 openai_client = OpenAILLMClient(api_key=os.getenv("OPENAI_API_KEY"))
 db = SessionLocal()
@@ -416,85 +417,6 @@ class StatsAgent:
 
         return query
     
-    def calculate_results(self, spec: dict, results: list) -> list:
-        calculate = spec.get("calculate")
-        if not calculate or not results:
-            return results
-        row = results[0]
-
-        if calculate == "AVG":
-            # Results are in alphabetical order'
-            total_at_bats = row[0]
-            total_hits = row[1]
-            batting_average = total_hits / total_at_bats if total_at_bats > 0 else 0
-            return [{"batting_average": round(batting_average, 3)}]
-
-        elif calculate == "ERA":
-            # Assuming results contain summed 'earned_runs' and 'outs_pitched'
-            total_earned_runs = row[0]
-            total_outs_pitched = row[1]
-            if total_outs_pitched > 0:
-                innings_pitched = total_outs_pitched / 3
-                era = (total_earned_runs * 9) / innings_pitched
-            else:
-                era = 0
-            return [{"ERA": round(era, 2)}]
-        
-        elif calculate == "WHIP":
-            # Alphabetical: hits_allowed, outs_pitched, walks
-            total_hits_allowed = row[0]
-            total_outs_pitched = row[1]
-            total_walks = row[2]
-            innings_pitched = total_outs_pitched / 3 if total_outs_pitched > 0 else 0
-            whip = (total_hits_allowed + total_walks) / innings_pitched if innings_pitched > 0 else 0
-            return [{"WHIP": round(whip, 3)}]
-
-        elif calculate == "OBP":
-            # Alphabetical: at_bats, hits, walks_batting
-            total_at_bats = row[0]
-            total_hits = row[1]
-            total_walks_batting = row[2]
-            denominator = total_at_bats + total_walks_batting
-            obp = (total_hits + total_walks_batting) / denominator if denominator > 0 else 0
-            return [{"OBP": round(obp, 3)}]
-
-        # Slugging Percentage (SLG): (1B + 2*2B + 3*3B + 4*HR) / at_bats
-        elif calculate == "SLG":
-            # Alphabetical: at_bats, doubles, hits, home_runs, triples
-            total_at_bats = row[0]
-            total_doubles = row[1]
-            total_hits = row[2]
-            total_home_runs = row[3]
-            total_triples = row[4]
-            singles = total_hits - total_doubles - total_triples - total_home_runs
-            total_bases = singles + 2 * total_doubles + 3 * total_triples + 4 * total_home_runs
-            slg = total_bases / total_at_bats if total_at_bats > 0 else 0
-            return [{"SLG": round(slg, 3)}]
-
-        elif calculate == "OPS":
-            # Alphabetical: at_bats, doubles, hits, home_runs, triples, walks_batting
-            total_at_bats = row[0]
-            total_doubles = row[1]
-            total_hits = row[2]
-            total_home_runs = row[3]
-            total_triples = row[4]
-            total_walks_batting = row[5]
-            singles = total_hits - total_doubles - total_triples - total_home_runs
-
-            # OBP
-            obp_denominator = total_at_bats + total_walks_batting
-            obp = (total_hits + total_walks_batting) / obp_denominator if obp_denominator > 0 else 0
-
-            # SLG
-            total_bases = singles + 2 * total_doubles + 3 * total_triples + 4 * total_home_runs
-            slg = total_bases / total_at_bats if total_at_bats > 0 else 0
-
-            ops = obp + slg
-            return [{"OPS": round(ops, 3)}]
-
-        else:
-            raise ValueError(f"Unsupported calculation: {calculate}")
-
     def handle_request(self, state: GraphState):
         """
         End-to-end: natural language request -> JSON spec -> SQL -> DB results -> natural language answer.
@@ -550,7 +472,11 @@ class StatsAgent:
             query = self.spec_to_query(spec)
             results = query.all()
         print(f"raw results: {results}")
-        calculated_results = self.calculate_results(spec, results)
+        calculate = spec.get("calculate")
+        if calculate and results:
+            calculated_results = [StatsCalculator.from_spec(calculate, results[0])]
+        else:
+            calculated_results = results
         print(f"calculated Results: {calculated_results}")
         # --- Step 3. Ask LLM to format results for user ---
         answer_prompt = self._build_answer_prompt(user_message, spec, calculated_results)

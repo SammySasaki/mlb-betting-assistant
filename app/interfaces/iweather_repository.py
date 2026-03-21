@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Optional
-from app.db_models import Weather
+from app.db.models import Weather
 
 class IWeatherRepository(ABC):
     @abstractmethod

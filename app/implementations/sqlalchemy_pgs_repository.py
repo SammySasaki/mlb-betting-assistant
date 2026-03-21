@@ -4,7 +4,7 @@ from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
-from app.db_models import PlayerGameStats, Game
+from app.db.models import PlayerGameStats, Game
 from app.interfaces.iplayer_game_stats_repository import IPlayerGameStatsRepository
 
 

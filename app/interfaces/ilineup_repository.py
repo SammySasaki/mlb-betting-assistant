@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from datetime import date
 
-from app.db_models import Lineups
+from app.db.models import Lineups
 
 
 class ILineupRepository(ABC):
