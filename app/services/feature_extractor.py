@@ -208,23 +208,43 @@ class FeatureExtractor:
                 runs.append(runs_scored)
         return np.mean(runs) if runs else np.nan
     
-    def _pitcher_stats(self, pitcher: Player, season_year: int, prefix: str) -> dict:
-        stats = self.pgs_repo.get_aggregate_stats(pitcher.id, season_year=season_year)
-        if not stats:
-            return {
-                "era": self.NEW_PITCHER_ERA,
-                "whip": self.NEW_PITCHER_WHIP
-            }
+    EARLY_SEASON_THRESHOLD = 3
+
+    def _calc_era_whip(self, stats) -> tuple:
+        """Returns (era, whip) from a list of PlayerGameStats rows, or (None, None) if insufficient data."""
         total_outs = sum(s.innings_pitched * 3 for s in stats if s.innings_pitched is not None)
         total_er = sum(s.earned_runs for s in stats if s.earned_runs is not None)
         total_hits = sum(s.hits for s in stats if s.hits is not None)
         total_walks = sum(s.walks for s in stats if s.walks is not None)
-        
-        
         ip = total_outs / 3 if total_outs > 0 else 0
         era = (total_er * 9 / ip) if ip > 0 else None
         whip = ((total_walks + total_hits) / ip) if ip > 0 else None
-        return {f"{prefix}_sp_era": era, f"{prefix}_sp_whip": whip}
+        return era, whip
+
+    def _pitcher_stats(self, pitcher: Player, season_year: int, prefix: str) -> dict:
+        current_stats = self.pgs_repo.get_aggregate_stats(pitcher.id, season_year=season_year)
+
+        use_prior = not current_stats or len(current_stats) < self.EARLY_SEASON_THRESHOLD
+
+        if use_prior:
+            prior_stats = self.pgs_repo.get_aggregate_stats(pitcher.id, season_year=season_year - 1)
+            if prior_stats:
+                era, whip = self._calc_era_whip(prior_stats)
+                return {
+                    f"{prefix}_sp_era": era if era is not None else self.NEW_PITCHER_ERA,
+                    f"{prefix}_sp_whip": whip if whip is not None else self.NEW_PITCHER_WHIP,
+                }
+            # Truly new pitcher — no current or prior season data
+            return {
+                f"{prefix}_sp_era": self.NEW_PITCHER_ERA,
+                f"{prefix}_sp_whip": self.NEW_PITCHER_WHIP,
+            }
+
+        era, whip = self._calc_era_whip(current_stats)
+        return {
+            f"{prefix}_sp_era": era if era is not None else self.NEW_PITCHER_ERA,
+            f"{prefix}_sp_whip": whip if whip is not None else self.NEW_PITCHER_WHIP,
+        }
         
     def _lineup_ops(self, team: str, date, season_year: int) -> float:
         """Calculate OPS for the team's top 5 players lineup over the season up to the given date."""

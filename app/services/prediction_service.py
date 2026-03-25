@@ -1,12 +1,11 @@
+import logging
 import pandas as pd
-from datetime import date, timedelta
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.sql import func
 import joblib
-from app.db.models import Game, Prediction
 from app.services.feature_extractor import FeatureExtractor
 from app.interfaces.ipredictions_repository import IPredictionRepository
 from app.interfaces.igame_repository import IGameRepository
+
+logger = logging.getLogger(__name__)
 
 
 class PredictionService:
@@ -133,6 +132,15 @@ class PredictionService:
             "recommendation": recommendation,
         }
 
+    EARLY_SEASON_MIN_GAMES = 10
+
+    def _is_early_season(self, game) -> bool:
+        home_record = self.game_repo.get_team_record_before_date(game.home_team, game.date, game.season_year)
+        away_record = self.game_repo.get_team_record_before_date(game.away_team, game.date, game.season_year)
+        home_games = (home_record[0] or 0) + (home_record[1] or 0)
+        away_games = (away_record[0] or 0) + (away_record[1] or 0)
+        return home_games < self.EARLY_SEASON_MIN_GAMES or away_games < self.EARLY_SEASON_MIN_GAMES
+
     # ----------------------------
     # Game fetchers (delegate to GameRepository ideally)
     # ----------------------------
@@ -150,6 +158,10 @@ class PredictionService:
         results, ml_results = [], []
 
         for game in games:
+            if self._is_early_season(game):
+                logger.info(f"Game {game.id} ({game.away_team} @ {game.home_team}): early season game, watch and enjoy")
+                continue
+
             features = self.extractor.extract_total_features_from_game(game)
             ml_features = self.extractor.extract_ML_features_from_game(game)
 
@@ -199,6 +211,10 @@ class PredictionService:
         Returns a dict with 'totals' and 'ml' results.
         """
         results, ml_results = None, None
+
+        if self._is_early_season(game):
+            logger.info(f"Game {game.id} ({game.away_team} @ {game.home_team}): early season game, watch and enjoy")
+            return {"totals": None, "ml": None}
 
         # --- Extract features ---
         features = self.extractor.extract_total_features_from_game(game)
