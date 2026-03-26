@@ -71,8 +71,9 @@ def get_lineup_service(session: Session = Depends(get_db)) -> LineupService:
     pgs_repo = SqlAlchemyPlayerGameStatsRepository(session)
     lineup_repo = SQLAlchemyLineupRepository(session)
     game_repo = GameRepository(session)
+    player_repo = SQLAlchemyPlayerRepository(session)
     mlb_client = StatsApiClient()
-    return LineupService(pgs_repo, lineup_repo, mlb_client, game_repo)
+    return LineupService(pgs_repo, lineup_repo, mlb_client, game_repo, player_repo)
 
 
 def get_season_stats_repo(

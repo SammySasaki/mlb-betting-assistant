@@ -40,7 +40,7 @@ def build_graph():
     pgs_repository = SqlAlchemyPlayerGameStatsRepository(db)
     game_repository = GameRepository(db)
     mlb_api_client = StatsApiClient()
-    lineup_service = LineupService(pgs_repository, lineup_repository, mlb_api_client, game_repository)
+    lineup_service = LineupService(pgs_repository, lineup_repository, mlb_api_client, game_repository, player_repository)
 
     classifier = ClassifierAgent(openai_client)
     stat_agent = StatsAgent(db, openai_client, atbat_service)

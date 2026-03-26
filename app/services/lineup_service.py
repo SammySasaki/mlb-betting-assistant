@@ -5,6 +5,7 @@ from app.interfaces.iapi_client import IApiClient
 from app.interfaces.ilineup_repository import ILineupRepository
 from app.interfaces.iplayer_game_stats_repository import IPlayerGameStatsRepository
 from app.interfaces.igame_repository import IGameRepository
+from app.interfaces.iplayer_repository import IPlayerRepository
 from infra.db.init_db import SessionLocal
 
 
@@ -15,11 +16,13 @@ class LineupService:
         lineup_repo: ILineupRepository,
         mlb_client: IApiClient,
         game_repo: IGameRepository,
+        player_repo: IPlayerRepository,
     ):
         self.player_stats_repo = player_stats_repo
         self.lineup_repo = lineup_repo
         self.mlb_client = mlb_client
         self.game_repo = game_repo
+        self.player_repo = player_repo
 
     def save_lineups_for_game(self, game_id: int):
         """Fetch lineup for a given game, enriched with season + last10 stats"""
@@ -39,11 +42,18 @@ class LineupService:
             game.home_probable_pitcher_id = home_sp
             game.away_probable_pitcher_id = away_sp
             self.game_repo.update(game)
+            team_name = team_data["team"].get("name", "")
             for player_id in team_data.get("batters", []):
                 player_obj = team_data["players"][f"ID{player_id}"]
                 if player_obj.get("battingOrder"):  # Only starting hitters
                     batting_order = player_obj.get("battingOrder")
                     position = player_obj.get("position", {}).get("abbreviation")
+                    full_name = player_obj.get("person", {}).get("fullName", "")
+
+                    # Upsert player with current team and position
+                    existing = self.player_repo.get_by_id(player_id)
+                    throwing_hand = None if existing else self.mlb_client.get_player_arm(player_id)
+                    self.player_repo.upsert(player_id, full_name, team_name, position, throwing_hand, existing)
 
                     # --- Season stats before game date ---
                     season_games: List[PlayerGameStats] = self.player_stats_repo.get_aggregate_stats(
@@ -96,7 +106,8 @@ class LineupService:
                     )
                     entries.append(entry)
 
-        # Save lineup entries in DB
+        # Flush all player upserts in one commit, then save lineup entries
+        self.player_repo.flush()
         self.lineup_repo.upsert_lineup_entries(entries)
     
     def save_lineups_by_date(self, game_date):
@@ -148,12 +159,14 @@ class LineupService:
             from app.implementations.sqlalchemy_lineup_repository import SQLAlchemyLineupRepository
             from app.implementations.sqlalchemy_game_repository import GameRepository
             from app.implementations.sqlalchemy_pgs_repository import SqlAlchemyPlayerGameStatsRepository
+            from app.implementations.sqlalchemy_player_repository import SQLAlchemyPlayerRepository
             from app.implementations.mlb_api_client import StatsApiClient
             from app.services.lineup_service import LineupService
 
             player_stats_repo = SqlAlchemyPlayerGameStatsRepository(session)
             lineup_repo = SQLAlchemyLineupRepository(session)
             game_repo = GameRepository(session)
+            player_repo = SQLAlchemyPlayerRepository(session)
             mlb_client = StatsApiClient()
 
             service = LineupService(
@@ -161,6 +174,7 @@ class LineupService:
                 lineup_repo=lineup_repo,
                 mlb_client=mlb_client,
                 game_repo=game_repo,
+                player_repo=player_repo,
             )
 
             from datetime import date, timedelta

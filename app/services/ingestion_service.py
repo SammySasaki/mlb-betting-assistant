@@ -33,6 +33,7 @@ from app.services.lineup_service import LineupService
 from app.implementations.sqlalchemy_lineup_repository import SQLAlchemyLineupRepository
 from app.implementations.sqlalchemy_game_repository import GameRepository
 from app.implementations.sqlalchemy_pgs_repository import SqlAlchemyPlayerGameStatsRepository
+from app.implementations.sqlalchemy_player_repository import SQLAlchemyPlayerRepository
 from app.utils.utils import venue_utc_offsets
 from app.implementations.sqlalchemy_player_season_stats_repository import SQLAlchemyPlayerSeasonStatsRepository
 from app.services.season_stats_service import SeasonStatsService
@@ -307,6 +308,7 @@ class MLBIngestionService:
             lineup_repo=SQLAlchemyLineupRepository(session),
             mlb_client=self._mlb_client,
             game_repo=GameRepository(session),
+            player_repo=SQLAlchemyPlayerRepository(session),
         )
 
     def _store_upcoming_game(self, session: Session, game_data: dict) -> Game | None:

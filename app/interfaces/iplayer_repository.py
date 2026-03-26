@@ -18,3 +18,16 @@ class IPlayerRepository(ABC):
         Given a player_id, return the Player object or None if not found.
         """
         pass
+
+    @abstractmethod
+    def flush(self) -> None:
+        """Commit all pending player upserts."""
+        pass
+
+    @abstractmethod
+    def upsert(self, player_id: int, name: str, team: str, position: str, throwing_hand: Optional[str] = None, existing: Optional[Player] = None) -> None:
+        """
+        Insert or update a player record. For new players, throwing_hand is set if provided.
+        For existing players, only team and position are updated.
+        """
+        pass
