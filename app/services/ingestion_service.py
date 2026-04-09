@@ -290,6 +290,14 @@ class MLBIngestionService:
                 session.rollback()
                 summary["errors"].append(f"Lineups: {exc}")
 
+            try:
+                games_in_db = session.query(Game).filter(Game.date == target_date).all()
+                self._update_features_for_games(session, games_in_db, target_date)
+            except Exception as exc:
+                msg = f"Features: {exc}"
+                logger.error(msg)
+                summary["errors"].append(msg)
+
             session.commit()
 
         logger.info(

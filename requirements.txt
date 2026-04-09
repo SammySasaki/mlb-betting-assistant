@@ -3,7 +3,7 @@ sqlalchemy
 alembic
 requests
 pandas
-scikit-learn
+scikit-learn==1.7.0
 joblib
 openai
 langgraph

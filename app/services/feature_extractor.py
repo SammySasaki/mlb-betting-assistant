@@ -156,8 +156,8 @@ class FeatureExtractor:
         
         features["home_avg_runs_vs_arm"] = self._runs_vs_arm(game.home_team, game.away_probable_pitcher, game.date, game.season_year, home=True)
         features["away_avg_runs_vs_arm"] = self._runs_vs_arm(game.away_team, game.home_probable_pitcher, game.date, game.season_year, home=False)
-        features["home_avg_runs_last10_total"] = self._avg_runs_last_n(game.home_team, game.date, game.season_year, n=10, is_home=True)
-        features["away_avg_runs_last10_total"] = self._avg_runs_last_n(game.away_team, game.date, game.season_year, n=10, is_home=False)
+        features["home_avg_runs_lastx_total"] = self._avg_runs_last_n(game.home_team, game.date, game.season_year, n=10, is_home=True)
+        features["away_avg_runs_lastx_total"] = self._avg_runs_last_n(game.away_team, game.date, game.season_year, n=10, is_home=False)
         features.update(self._pitcher_stats(game.home_probable_pitcher, game.season_year, prefix="home"))
         features.update(self._pitcher_stats(game.away_probable_pitcher, game.season_year, prefix="away"))
 
@@ -172,8 +172,8 @@ class FeatureExtractor:
         features["venue_run_factor"] = venue_run_factors.get(game.venue, 1.0)
         features["home_sp_vs_away_lineup"] = features["home_sp_era"] - features["away_lineup_ops"]
         features["away_sp_vs_home_lineup"] = features["away_sp_era"] - features["home_lineup_ops"]
-        features["home_offense_vs_away_bullpen"] = features["home_avg_runs_last10_total"] - features["away_bullpen_era"]
-        features["away_offense_vs_home_bullpen"] = features["away_avg_runs_last10_total"] - features["home_bullpen_era"]
+        features["home_offense_vs_away_bullpen"] = features["home_avg_runs_lastx_total"] - features["away_bullpen_era"]
+        features["away_offense_vs_home_bullpen"] = features["away_avg_runs_lastx_total"] - features["home_bullpen_era"]
 
         return features
 
