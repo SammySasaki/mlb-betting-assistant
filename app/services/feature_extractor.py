@@ -222,6 +222,13 @@ class FeatureExtractor:
         return era, whip
 
     def _pitcher_stats(self, pitcher: Player, season_year: int, prefix: str) -> dict:
+        if not pitcher:
+            return {
+                f"{prefix}_sp_era": self.NEW_PITCHER_ERA,
+                f"{prefix}_sp_whip": self.NEW_PITCHER_WHIP,
+                f"{prefix}_sp_last3_era": self.NEW_PITCHER_ERA,
+                f"{prefix}_throwing_hand": None,
+            }
         current_stats = self.pgs_repo.get_aggregate_stats(pitcher.id, season_year=season_year)
 
         use_prior = not current_stats or len(current_stats) < self.EARLY_SEASON_THRESHOLD
