@@ -55,7 +55,7 @@ class StatsAgent:
             Provides batter vs. pitcher results (e.g., hits, at-bats, strikeouts) for a given season
 
 
-        The current season_year is 2025
+        The current season_year is 2026
 
         ### Objective
         Convert the user's request into a **JSON spec** that fully supports:
