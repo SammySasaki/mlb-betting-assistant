@@ -13,6 +13,9 @@ class SQLAlchemyPlayerRepository(IPlayerRepository):
             return player.name
         return None
 
+    def get_by_name(self, name: str) -> Optional[Player]:
+        return self.session.query(Player).filter(Player.name.ilike(name)).first()
+
     def get_by_id(self, player_id: int) -> Optional[Player]:
         return self.session.query(Player).filter(Player.id == player_id).one_or_none()
 

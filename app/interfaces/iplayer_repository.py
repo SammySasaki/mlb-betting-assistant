@@ -13,6 +13,11 @@ class IPlayerRepository(ABC):
         pass
 
     @abstractmethod
+    def get_by_name(self, name: str) -> Optional[Player]:
+        """Return the Player whose name matches (case-insensitive), or None."""
+        pass
+
+    @abstractmethod
     def get_by_id(self, player_id: int) -> Optional[Player]:
         """
         Given a player_id, return the Player object or None if not found.

@@ -2,6 +2,7 @@
 from langgraph.graph import StateGraph, END, START
 from app.agents.classifier_agent import ClassifierAgent
 from app.agents.stats_agent import StatsAgent
+from app.agents.live_stat_agent import LiveStatAgent
 from app.agents.predictor_agent import MLBPredictionAgent
 from app.agents.lineup_agent import LineupAgent
 # from agents.reasoning_agent import ReasoningAgent
@@ -24,6 +25,8 @@ def classifier_router(state: GraphState) -> str:
 
     if intent == "STAT":
         return "STAT"
+    elif intent == "LIVE_STAT":
+        return "LIVE_STAT"
     elif intent == "RECOMMENDATION":
         return "RECOMMENDATION"
     elif intent == "LINEUP":
@@ -44,6 +47,7 @@ def build_graph():
 
     classifier = ClassifierAgent(openai_client)
     stat_agent = StatsAgent(db, openai_client, atbat_service)
+    live_stat_agent = LiveStatAgent(mlb_api_client, openai_client, player_repository)
     lineup_agent = LineupAgent(player_repository, lineup_repository, openai_client, lineup_service, game_repository)
     prediction_agent = MLBPredictionAgent(openai_client=openai_client, db_session=db)
     
@@ -53,6 +57,7 @@ def build_graph():
     graph.add_node("classifier", classifier.classify_message)
 
     graph.add_node("stat_agent", stat_agent.handle_request)
+    graph.add_node("live_stat_agent", live_stat_agent.handle_request)
     graph.add_node("prediction_agent", prediction_agent.handle_request)
     graph.add_node("lineup_agent", lineup_agent.handle_request)
 
@@ -64,13 +69,14 @@ def build_graph():
         classifier_router,
         {
             "STAT": "stat_agent",
+            "LIVE_STAT": "live_stat_agent",
             "RECOMMENDATION": "prediction_agent",
             "LINEUP": "lineup_agent",
             "END": END
         },
     )
 
-    # 4. STAT ends directly
     graph.add_edge("stat_agent", END)
+    graph.add_edge("live_stat_agent", END)
 
     return graph.compile()

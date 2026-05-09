@@ -52,6 +52,33 @@ class StatsApiClient(IApiClient):
         except (KeyError, IndexError):
             return None
 
+    def get_league_leaders(self, stat_category: str, season: int, stat_group: str = "pitching", limit: int = 10) -> list[dict]:
+        """Return ranked league leaders for a given stat category."""
+        resp = self.session.get(f"{self.BASE_URL}/stats/leaders", params={
+            "leaderCategories": stat_category,
+            "season": season,
+            "sportId": 1,
+            "limit": limit,
+            "statGroup": stat_group,
+        })
+        resp.raise_for_status()
+        leaders = resp.json().get("leagueLeaders", [{}])[0].get("leaders", [])
+        return [
+            {"rank": l["rank"], "name": l["person"]["fullName"], "value": l["value"]}
+            for l in leaders
+        ]
+
+    def get_player_season_stats(self, player_id: int, season: int, stat_group: str = "hitting") -> dict:
+        """Return season stat split for a single player."""
+        resp = self.session.get(f"{self.BASE_URL}/people/{player_id}/stats", params={
+            "stats": "season",
+            "season": season,
+            "group": stat_group,
+        })
+        resp.raise_for_status()
+        splits = resp.json().get("stats", [{}])[0].get("splits", [])
+        return splits[0].get("stat", {}) if splits else {}
+
     def get_probable_pitchers(self, game_id: int) -> tuple[int | None, int | None]:
         """Return (home_pitcher_id, away_pitcher_id) for a game."""
         try:

@@ -4,7 +4,7 @@ import os
 from app.graph.state import GraphState
 from app.interfaces.illm_client import ILLMClient
 
-CATEGORIES = ["STAT", "RECOMMENDATION", "LINEUP", "OBSERVATION", "OTHER"]
+CATEGORIES = ["STAT", "LIVE_STAT", "RECOMMENDATION", "LINEUP", "OBSERVATION", "OTHER"]
 SYSTEM_PROMPT = "You are a sports betting analyst assistant."
 
 class ClassifierAgent:
@@ -19,11 +19,21 @@ class ClassifierAgent:
         Classify the following user message into one of:
         {", ".join(CATEGORIES)}
 
+        Use LIVE_STAT for questions about a player's season-level stats or league leaderboards
+        (e.g. ERA leaders, home run totals, batting average for a specific player this season).
+
+        Use STAT for questions that require game-level detail, trends across multiple games,
+        weather correlations, or head-to-head records that span individual game rows.
+
         Examples:
+        - "Who leads the league in ERA?" → LIVE_STAT
+        - "Top 10 home run leaders this season" → LIVE_STAT
+        - "What is Shohei Ohtani's batting average this year?" → LIVE_STAT
+        - "How many strikeouts does Freddy Peralta have this season?" → LIVE_STAT
         - "How many runs per game did the Giants score in their last 5 road games?" → STAT
-        - "What is Shohei Ohtani's ERA over the last 5 games against the Red Sox" → STAT
+        - "What is Shohei Ohtani's ERA in games with wind over 15mph?" → STAT
+        - "How did the Giants score in each of their last 3 home games?" → STAT
         - "Should I bet the over for tonight's Yankees game?" → RECOMMENDATION
-        - "What is the latest news on the Mets?" → NEWS
         - "The Dodgers have been hitting really well lately." → OBSERVATION
         - "Who is batting 1st for the Yankees today?" → LINEUP
         - "Who is playing shortstop for the Dodgers today?" → LINEUP
@@ -37,7 +47,7 @@ class ClassifierAgent:
         """Ask LLM to classify the intent of the user's message""" 
         user_message = state["input"] 
         intent = "" 
-        categories = ["STAT", "RECOMMENDATION", "LINEUP", "OBSERVATION", "OTHER"]
+        categories = CATEGORIES
         raw_output = self.client.chat(
                 [
                     {"role": "system", "content": SYSTEM_PROMPT},

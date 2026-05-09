@@ -223,7 +223,31 @@ class StatsAgent:
         "aggregate": "sum",
         "calculate": "ERA"
         }}
-        ### Task 
+
+        Request: "Who leads the league in ERA this season?"
+        {{
+        "select": ["earned_runs", "name", "outs_pitched"],
+        "filters": {{
+            "game_filters": {{"season_year": 2025}},
+            "player_filters": {{"position": "P"}}
+        }},
+        "aggregate": "sum",
+        "calculate": "ERA",
+        "limit": 10
+        }}
+
+        Request: "Who has the best batting average this season?"
+        {{
+        "select": ["at_bats", "hits", "name"],
+        "filters": {{
+            "game_filters": {{"season_year": 2025}}
+        }},
+        "aggregate": "sum",
+        "calculate": "AVG",
+        "limit": 10
+        }}
+
+        ### Task
         Now generate the JSON spec for: "{user_message}"
         """
     
@@ -445,6 +469,17 @@ class StatsAgent:
         )
         
         spec = _extract_json(spec_resp)
+
+        # If calculating a rate stat across multiple players, name must be
+        # in the select so GROUP BY and result labelling work correctly.
+        if spec.get("calculate") and not spec.get("filters", {}).get("player_filters", {}).get("name"):
+            selects = spec.get("select", [])
+            if isinstance(selects, str):
+                selects = [selects]
+            if "name" not in selects:
+                selects.append("name")
+            spec["select"] = selects
+
         if "select" in spec and isinstance(spec["select"], list):
             spec["select"].sort()
         print(spec)
