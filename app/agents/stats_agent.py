@@ -482,6 +482,21 @@ class StatsAgent:
             results = query.all()
         print(f"raw results: {results}")
         calculate = spec.get("calculate")
+
+        # Minimum volume thresholds for rate stats — filters out players who
+        # barely appeared and would otherwise show unrealistic rates.
+        _minimums = {
+            "ERA":  ("outs_pitched", 9),   # 3 IP
+            "WHIP": ("outs_pitched", 9),
+            "AVG":  ("at_bats", 10),
+            "OBP":  ("at_bats", 10),
+            "SLG":  ("at_bats", 10),
+            "OPS":  ("at_bats", 10),
+        }
+        if calculate and calculate in _minimums:
+            min_field, min_val = _minimums[calculate]
+            results = [r for r in results if (r._mapping.get(min_field) or 0) >= min_val]
+
         if calculate and results:
             _sort_asc = {"ERA", "WHIP"}
             calculated_results = []
