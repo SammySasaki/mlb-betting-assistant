@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import desc, asc, case, and_, or_, func
+from sqlalchemy import desc, asc, case, and_, or_, func, types as sa_types
 from sqlalchemy.dialects import postgresql
 from app.db.models import Game, Player, PlayerGameStats, Weather
 from app.services.at_bat_service import AtBatService
@@ -405,8 +405,17 @@ class StatsAgent:
 
             # Wrap the limited & ordered query as a subquery
             subq = query.subquery()
-            agg_columns = [agg_map[aggregate](getattr(subq.c, c.key)).label(c.key) for c in subq.c]
-            query = self.db_session.query(*agg_columns)
+            agg_cols = []
+            group_by_cols = []
+            for c in subq.c:
+                if isinstance(c.type, (sa_types.Integer, sa_types.Float, sa_types.Numeric)):
+                    agg_cols.append(agg_map[aggregate](c).label(c.key))
+                else:
+                    agg_cols.append(c)
+                    group_by_cols.append(c)
+            query = self.db_session.query(*agg_cols)
+            if group_by_cols:
+                query = query.group_by(*group_by_cols)
 
         # ---- Compile SQL for debugging ----
         compiled = query.statement.compile(
@@ -474,7 +483,18 @@ class StatsAgent:
         print(f"raw results: {results}")
         calculate = spec.get("calculate")
         if calculate and results:
-            calculated_results = [StatsCalculator.from_spec(calculate, results[0])]
+            _sort_asc = {"ERA", "WHIP"}
+            calculated_results = []
+            for row in results:
+                calc = StatsCalculator.from_spec(calculate, row)
+                if hasattr(row, "name") and row.name is not None:
+                    calc["name"] = row.name
+                calculated_results.append(calc)
+            stat_key = next(k for k in calculated_results[0] if k != "name")
+            calculated_results.sort(
+                key=lambda r: r.get(stat_key, 0),
+                reverse=(calculate not in _sort_asc),
+            )
         else:
             calculated_results = results
         print(f"calculated Results: {calculated_results}")

@@ -44,34 +44,19 @@ class StatsCalculator:
 
     @classmethod
     def from_spec(cls, calculate: str, row) -> dict:
-        """Drop-in replacement for StatsAgent.calculate_results().
-
-        Fields in `row` are ordered alphabetically because the agent sorts
-        the select list before building the query.
-        """
+        """Compute a derived stat from a SQLAlchemy Row, accessed by column name."""
+        m = row._mapping
         if calculate == "AVG":
-            # Alphabetical: at_bats[0], hits[1]
-            return {"batting_average": cls.batting_avg(hits=row[1], at_bats=row[0])}
-
+            return {"batting_average": cls.batting_avg(hits=m["hits"], at_bats=m["at_bats"])}
         elif calculate == "ERA":
-            # Alphabetical: earned_runs[0], outs_pitched[1]
-            return {"ERA": cls.era(earned_runs=row[0], outs_pitched=row[1])}
-
+            return {"ERA": cls.era(earned_runs=m["earned_runs"], outs_pitched=m["outs_pitched"])}
         elif calculate == "WHIP":
-            # Alphabetical: hits_allowed[0], outs_pitched[1], walks[2]
-            return {"WHIP": cls.whip(hits_allowed=row[0], walks=row[2], outs_pitched=row[1])}
-
+            return {"WHIP": cls.whip(hits_allowed=m["hits_allowed"], walks=m["walks"], outs_pitched=m["outs_pitched"])}
         elif calculate == "OBP":
-            # Alphabetical: at_bats[0], hits[1], walks_batting[2]
-            return {"OBP": cls.obp(hits=row[1], walks=row[2], at_bats=row[0])}
-
+            return {"OBP": cls.obp(hits=m["hits"], walks=m["walks_batting"], at_bats=m["at_bats"])}
         elif calculate == "SLG":
-            # Alphabetical: at_bats[0], doubles[1], hits[2], home_runs[3], triples[4]
-            return {"SLG": cls.slg(hits=row[2], doubles=row[1], triples=row[4], home_runs=row[3], at_bats=row[0])}
-
+            return {"SLG": cls.slg(hits=m["hits"], doubles=m["doubles"], triples=m["triples"], home_runs=m["home_runs"], at_bats=m["at_bats"])}
         elif calculate == "OPS":
-            # Alphabetical: at_bats[0], doubles[1], hits[2], home_runs[3], triples[4], walks_batting[5]
-            return {"OPS": cls.ops(hits=row[2], doubles=row[1], triples=row[4], home_runs=row[3], at_bats=row[0], walks=row[5])}
-
+            return {"OPS": cls.ops(hits=m["hits"], doubles=m["doubles"], triples=m["triples"], home_runs=m["home_runs"], at_bats=m["at_bats"], walks=m["walks_batting"])}
         else:
             raise ValueError(f"Unsupported calculation: {calculate}")
