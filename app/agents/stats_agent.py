@@ -261,6 +261,7 @@ class StatsAgent:
         aggregate = spec.get("aggregate")
         order_by = spec.get("order_by")
         limit = spec.get("limit")
+        calculate = spec.get("calculate")
 
         if isinstance(select_fields, str):
             select_fields = [select_fields]
@@ -389,7 +390,9 @@ class StatsAgent:
             query = query.order_by(asc(Game.date))
 
         # --- Limit ---
-        if limit:
+        # When a rate stat is being calculated (ERA, AVG, etc.), limit applies to
+        # the final sorted player list, not the raw game rows — skip it here.
+        if limit and not calculate:
             query = query.limit(limit)
 
         # --- aggregation ---
@@ -438,7 +441,7 @@ class StatsAgent:
                 {"role": "system", "content": "You are a query translator that outputs ONLY valid JSON."},
                 {"role": "user","content": prompt}
             ],
-            model="gpt-5"
+            model="gpt-4o-mini"
         )
         
         spec = _extract_json(spec_resp)
@@ -510,6 +513,8 @@ class StatsAgent:
                 key=lambda r: r.get(stat_key, 0),
                 reverse=(calculate not in _sort_asc),
             )
+            if spec.get("limit"):
+                calculated_results = calculated_results[: spec["limit"]]
         else:
             calculated_results = results
         print(f"calculated Results: {calculated_results}")
