@@ -48,7 +48,9 @@ class OddsService:
     def ingest_lines_for_date(self, target_date: date) -> dict:
         """Fetch and store current totals + moneyline odds for games on target_date.
 
-        Intended for upcoming games (today or tomorrow).  Scores are not required.
+        Only hits the API for markets where at least one game still has NULL odds,
+        and only writes to games that are still missing values. This keeps credit
+        usage near zero on runs after all lines are posted.
 
         Returns
         -------
@@ -65,18 +67,32 @@ class OddsService:
             "errors": [],
         }
 
-        totals_odds = self._client.get_totals_odds()
-        ml_odds = self._client.get_ml_odds()
-
         with SessionLocal() as session:
             games = session.query(Game).filter(Game.date == target_date).all()
 
-            for game in games:
+            needs_totals = [g for g in games if g.hr_total_runs_line is None]
+            needs_ml = [g for g in games if g.home_ml_price is None or g.away_ml_price is None]
+
+            if not needs_totals and not needs_ml:
+                logger.info("ingest_lines_for_date %s – all odds already set, skipping API", target_date)
+                return summary
+
+            totals_odds = self._client.get_totals_odds() if needs_totals else []
+            ml_odds = self._client.get_ml_odds() if needs_ml else []
+
+            for game in needs_totals:
                 try:
                     match = self._find_match(game, totals_odds)
                     if match and self._apply_totals(game, match):
                         summary["totals_updated"] += 1
+                except Exception as exc:
+                    session.rollback()
+                    msg = f"Game {game.id} ({game.away_team} @ {game.home_team}): {exc}"
+                    logger.error(msg)
+                    summary["errors"].append(msg)
 
+            for game in needs_ml:
+                try:
                     match = self._find_match(game, ml_odds)
                     if match and self._apply_moneylines(game, match):
                         summary["ml_updated"] += 1

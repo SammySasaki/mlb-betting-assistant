@@ -1,17 +1,20 @@
 """
 scripts/daily_ingest.py
 
-Daily MLB ingestion job — run via Railway Cron at 11am ET (16:00 UTC).
+Daily MLB ingestion job — run hourly via Railway Cron from 11am-6pm ET (15:00-22:00 UTC).
 
 Steps (in order):
-  1. Ingest upcoming games + lineups for today
+  1. Ingest upcoming games + lineups + features for today
   2. Ingest current odds lines for today
   3. Backfill yesterday's completed game data (scores, box scores, features)
-  4. Run predictions for today's games
+  4. Run predictions for today's games that haven't started yet
+
+Safe to run concurrently — all writes are upserts and predictions are
+skipped for any game whose start_hour_utc <= current UTC hour.
 """
 import logging
 import sys
-from datetime import date, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 from infra.db.init_db import SessionLocal
 from app.services.ingestion_service import MLBIngestionService
@@ -34,6 +37,7 @@ log = logging.getLogger(__name__)
 
 today = date.today()
 yesterday = today - timedelta(days=1)
+now_utc_hour = datetime.now(timezone.utc).hour
 errors = []
 
 # ---------------------------------------------------------------------------
@@ -91,8 +95,9 @@ try:
     )
     service = PredictionService(extractor, SqlAlchemyPredictionRepository(session), game_repo)
     games = game_repo.get_games_by_date(today)
-    log.info("  %d game(s) to predict", len(games))
-    for game in games:
+    not_started = [g for g in games if g.start_hour_utc is None or g.start_hour_utc > now_utc_hour]
+    log.info("  %d game(s) total, %d not yet started", len(games), len(not_started))
+    for game in not_started:
         service.predict_and_log_for_game(game)
     session.close()
 except Exception as exc:
