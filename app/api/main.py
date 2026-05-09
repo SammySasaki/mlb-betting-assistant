@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import games, ingestion, odds, predictions, lineups, players, season_stats
+from app.api.routes import games, ingestion, odds, predictions, lineups, players, season_stats, chat
 
 app = FastAPI(
     title="Sports Betting API",
@@ -27,6 +27,7 @@ app.include_router(predictions.router)
 app.include_router(lineups.router)
 app.include_router(players.router)
 app.include_router(season_stats.router)
+app.include_router(chat.router)
 
 
 @app.get("/health", tags=["Health"])

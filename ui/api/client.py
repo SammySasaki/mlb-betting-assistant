@@ -28,6 +28,16 @@ def get_games(game_date: datetime.date) -> list[Game]:
     return [Game.from_dict(g) for g in resp.json()]
 
 
+def send_chat_message(message: str) -> str:
+    resp = requests.post(
+        f"{API_BASE}/chat",
+        json={"message": message},
+        timeout=60,
+    )
+    resp.raise_for_status()
+    return resp.json()["response"]
+
+
 def get_predictions(
     game_date: datetime.date,
     *,
