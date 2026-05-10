@@ -154,21 +154,24 @@ class LineupAgent:
 
 
     def handle_request(self, state: GraphState):
-        """
-        End-to-end: natural language request -> JSON spec -> SQL -> DB results -> natural language answer.
-        """
         user_message = state["input"]
-        # --- Step 1. Ask LLM to generate JSON spec ---
         prompt = self._build_prompt(user_message)
         llm_response = self.llm_client.chat(
             [
                 {"role": "system", "content": "You are a query translator that outputs ONLY valid JSON."},
-                {"role": "user","content": prompt}
+                {"role": "user", "content": prompt}
             ],
-            model="gpt-5"
+            model="gpt-4o-mini"
         )
-        result = self._read_json(llm_response)
-        return {**state, "output": result}
+        data = self._read_json(llm_response)
+
+        answer = self.llm_client.chat(
+            [
+                {"role": "system", "content": "You are a helpful MLB lineup assistant. Answer in plain conversational English."},
+                {"role": "user", "content": f'The user asked: "{user_message}"\nThe data returned: {data}\nWrite a concise natural language answer. If there is an error, explain it clearly.'}
+            ]
+        )
+        return {**state, "output": answer}
     
 
     # Who is batting 1st for the Yankees today?
