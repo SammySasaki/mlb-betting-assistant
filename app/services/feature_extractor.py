@@ -13,6 +13,8 @@ from app.interfaces.iweather_repository import IWeatherRepository
 class FeatureExtractor:
     NEW_PITCHER_ERA = 4.80
     NEW_PITCHER_WHIP = 1.40
+    NEW_PITCHER_K9 = 8.5
+    NEW_PITCHER_BB9 = 3.2
 
     def __init__(self,
                  pgs_repo: IPlayerGameStatsRepository, 
@@ -156,24 +158,35 @@ class FeatureExtractor:
         
         features["home_avg_runs_vs_arm"] = self._runs_vs_arm(game.home_team, game.away_probable_pitcher, game.date, game.season_year, home=True)
         features["away_avg_runs_vs_arm"] = self._runs_vs_arm(game.away_team, game.home_probable_pitcher, game.date, game.season_year, home=False)
-        features["home_avg_runs_lastx_total"] = self._avg_runs_last_n(game.home_team, game.date, game.season_year, n=10, is_home=True)
-        features["away_avg_runs_lastx_total"] = self._avg_runs_last_n(game.away_team, game.date, game.season_year, n=10, is_home=False)
+        features["home_avg_runs_lastx_total"] = self._avg_runs_last_n(game.home_team, game.date, game.season_year, n=10)
+        features["away_avg_runs_lastx_total"] = self._avg_runs_last_n(game.away_team, game.date, game.season_year, n=10)
         features.update(self._pitcher_stats(game.home_probable_pitcher, game.season_year, prefix="home"))
         features.update(self._pitcher_stats(game.away_probable_pitcher, game.season_year, prefix="away"))
 
         home_bp = self.feature_repo.get_bullpen_features_by_game_and_team(game.id, game.home_team)
         away_bp = self.feature_repo.get_bullpen_features_by_game_and_team(game.id, game.away_team)
-        if home_bp:
-            features["home_bullpen_era"] = home_bp.bullpen_era
-        if away_bp:
-            features["away_bullpen_era"] = away_bp.bullpen_era
+        features["home_bullpen_era"] = home_bp.bullpen_era if home_bp else np.nan
+        features["away_bullpen_era"] = away_bp.bullpen_era if away_bp else np.nan
         features["home_lineup_ops"] = self._lineup_ops(game.home_team, game.date, game.season_year)
         features["away_lineup_ops"] = self._lineup_ops(game.away_team, game.date, game.season_year)
         features["venue_run_factor"] = venue_run_factors.get(game.venue, 1.0)
-        features["home_sp_vs_away_lineup"] = features["home_sp_era"] - features["away_lineup_ops"]
-        features["away_sp_vs_home_lineup"] = features["away_sp_era"] - features["home_lineup_ops"]
+
+        # sp_last3_era from pre-computed pitcher_features table
+        home_pf = self.feature_repo.get_by_game_and_player(game.id, game.home_probable_pitcher_id)
+        away_pf = self.feature_repo.get_by_game_and_player(game.id, game.away_probable_pitcher_id)
+        features["home_sp_last3_era"] = (
+            home_pf.last3_era if home_pf and home_pf.last3_era is not None else self.NEW_PITCHER_ERA
+        )
+        features["away_sp_last3_era"] = (
+            away_pf.last3_era if away_pf and away_pf.last3_era is not None else self.NEW_PITCHER_ERA
+        )
+
+        # Interaction features — same-unit combinations only
         features["home_offense_vs_away_bullpen"] = features["home_avg_runs_lastx_total"] - features["away_bullpen_era"]
         features["away_offense_vs_home_bullpen"] = features["away_avg_runs_lastx_total"] - features["home_bullpen_era"]
+        features["total_sp_era"] = features["home_sp_era"] + features["away_sp_era"]
+        features["total_lineup_ops"] = features["home_lineup_ops"] + features["away_lineup_ops"]
+        features["total_sp_k9"] = features["home_sp_k9"] + features["away_sp_k9"]
 
         return features
 
@@ -196,29 +209,34 @@ class FeatureExtractor:
             "wind_direction": 0.0
         }
     
-    def _avg_runs_last_n(self, team: str, date, season_year: int, n=10, is_home=True) -> float:
+    def _avg_runs_last_n(self, team: str, date, season_year: int, n=10) -> float:
         games = self.game_repo.get_games_by_team_before_date(team, date, season_year)
-        games = [g for g in games if (g.home_team == team if is_home else g.away_team == team)]
         games = sorted(games, key=lambda g: g.date, reverse=True)[:n]
         runs = []
         for g in games:
-            runs_scored = g.home_score if is_home and g.home_team == team else g.away_score
-            runs_scored = g.away_score if not is_home and g.away_team == team else runs_scored
+            runs_scored = g.home_score if g.home_team == team else g.away_score
             if runs_scored is not None:
                 runs.append(runs_scored)
         return np.mean(runs) if runs else np.nan
     
     EARLY_SEASON_THRESHOLD = 3
 
-    def _calc_era_whip(self, stats) -> tuple:
-        """Returns (era, whip) from a list of PlayerGameStats rows, or (None, None) if insufficient data."""
-        total_outs = sum(s.innings_pitched * 3 for s in stats if s.innings_pitched is not None)
+    def _calc_pitcher_rates(self, stats) -> tuple:
+        """Returns (era, whip, k9, bb9) from PlayerGameStats rows, or (None, ...) if insufficient data."""
+        total_outs = sum(s.outs_pitched for s in stats if s.outs_pitched is not None)
         total_er = sum(s.earned_runs for s in stats if s.earned_runs is not None)
-        total_hits = sum(s.hits for s in stats if s.hits is not None)
+        total_hits_allowed = sum(s.hits_allowed for s in stats if s.hits_allowed is not None)
         total_walks = sum(s.walks for s in stats if s.walks is not None)
+        total_k = sum(s.strikeouts for s in stats if s.strikeouts is not None)
         ip = total_outs / 3 if total_outs > 0 else 0
         era = (total_er * 9 / ip) if ip > 0 else None
-        whip = ((total_walks + total_hits) / ip) if ip > 0 else None
+        whip = ((total_walks + total_hits_allowed) / ip) if ip > 0 else None
+        k9 = (total_k * 9 / ip) if ip > 0 else None
+        bb9 = (total_walks * 9 / ip) if ip > 0 else None
+        return era, whip, k9, bb9
+
+    def _calc_era_whip(self, stats) -> tuple:
+        era, whip, _, _ = self._calc_pitcher_rates(stats)
         return era, whip
 
     def _pitcher_stats(self, pitcher: Player, season_year: int, prefix: str) -> dict:
@@ -226,6 +244,8 @@ class FeatureExtractor:
             return {
                 f"{prefix}_sp_era": self.NEW_PITCHER_ERA,
                 f"{prefix}_sp_whip": self.NEW_PITCHER_WHIP,
+                f"{prefix}_sp_k9": self.NEW_PITCHER_K9,
+                f"{prefix}_sp_bb9": self.NEW_PITCHER_BB9,
                 f"{prefix}_sp_last3_era": self.NEW_PITCHER_ERA,
                 f"{prefix}_throwing_hand": None,
             }
@@ -236,21 +256,26 @@ class FeatureExtractor:
         if use_prior:
             prior_stats = self.pgs_repo.get_aggregate_stats(pitcher.id, season_year=season_year - 1)
             if prior_stats:
-                era, whip = self._calc_era_whip(prior_stats)
+                era, whip, k9, bb9 = self._calc_pitcher_rates(prior_stats)
                 return {
                     f"{prefix}_sp_era": era if era is not None else self.NEW_PITCHER_ERA,
                     f"{prefix}_sp_whip": whip if whip is not None else self.NEW_PITCHER_WHIP,
+                    f"{prefix}_sp_k9": k9 if k9 is not None else self.NEW_PITCHER_K9,
+                    f"{prefix}_sp_bb9": bb9 if bb9 is not None else self.NEW_PITCHER_BB9,
                 }
-            # Truly new pitcher — no current or prior season data
             return {
                 f"{prefix}_sp_era": self.NEW_PITCHER_ERA,
                 f"{prefix}_sp_whip": self.NEW_PITCHER_WHIP,
+                f"{prefix}_sp_k9": self.NEW_PITCHER_K9,
+                f"{prefix}_sp_bb9": self.NEW_PITCHER_BB9,
             }
 
-        era, whip = self._calc_era_whip(current_stats)
+        era, whip, k9, bb9 = self._calc_pitcher_rates(current_stats)
         return {
             f"{prefix}_sp_era": era if era is not None else self.NEW_PITCHER_ERA,
             f"{prefix}_sp_whip": whip if whip is not None else self.NEW_PITCHER_WHIP,
+            f"{prefix}_sp_k9": k9 if k9 is not None else self.NEW_PITCHER_K9,
+            f"{prefix}_sp_bb9": bb9 if bb9 is not None else self.NEW_PITCHER_BB9,
         }
         
     def _lineup_ops(self, team: str, date, season_year: int) -> float:

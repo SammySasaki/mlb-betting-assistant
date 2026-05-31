@@ -1,0 +1,57 @@
+{
+  "trained_at": "2026-05-31T21:14:21.836434+00:00",
+  "model": "XGBRegressor",
+  "train_seasons": [
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "test_seasons": [
+    2025
+  ],
+  "train_games": 5916,
+  "test_games": 1970,
+  "features": [
+    "temperature",
+    "wind_speed",
+    "wind_flag",
+    "home_avg_runs_vs_arm",
+    "away_avg_runs_vs_arm",
+    "home_avg_runs_lastx_total",
+    "away_avg_runs_lastx_total",
+    "home_sp_era",
+    "away_sp_era",
+    "home_sp_whip",
+    "away_sp_whip",
+    "home_sp_k9",
+    "away_sp_k9",
+    "home_sp_bb9",
+    "away_sp_bb9",
+    "home_sp_last3_era",
+    "away_sp_last3_era",
+    "home_bullpen_era",
+    "away_bullpen_era",
+    "home_lineup_ops",
+    "away_lineup_ops",
+    "venue_run_factor",
+    "home_offense_vs_away_bullpen",
+    "away_offense_vs_home_bullpen",
+    "total_sp_era",
+    "total_lineup_ops",
+    "total_sp_k9"
+  ],
+  "n_features": 27,
+  "best_round": 585,
+  "test_mae": 3.5954,
+  "test_r2": -0.0056,
+  "hyperparameters": {
+    "n_estimators": 600,
+    "max_depth": 4,
+    "learning_rate": 0.03,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "objective": "reg:absoluteerror",
+    "early_stopping_rounds": 50
+  }
+}

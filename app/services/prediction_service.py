@@ -14,7 +14,8 @@ class PredictionService:
         extractor: FeatureExtractor,
         prediction_repo: IPredictionRepository,
         game_repo: IGameRepository,
-        totals_model_path: str = "app/models/mlb_ridge.pkl",
+        totals_model_path: str = "app/models/mlb_xgb_model.pkl",
+        totals_imputer_path: str = "app/models/totals_imputer.pkl",
         ml_model_path: str = "app/models/moneyline_logreg.pkl",
     ):
         self.extractor = extractor
@@ -22,23 +23,29 @@ class PredictionService:
         self.game_repo = game_repo
 
         self.totals_model = joblib.load(totals_model_path)
+        self.totals_imputer = joblib.load(totals_imputer_path)
         self.ml_model = joblib.load(ml_model_path)
 
-        # Feature sets (match training pipeline)
+        # Must match training feature order exactly
         self.numeric_feature_cols = [
             "temperature",
+            "wind_speed",
             "wind_flag",
-            "home_avg_runs_vs_arm", "home_avg_runs_lastx_total",
-            "away_avg_runs_vs_arm", "away_avg_runs_lastx_total",
+            "home_avg_runs_vs_arm", "away_avg_runs_vs_arm",
+            "home_avg_runs_lastx_total", "away_avg_runs_lastx_total",
             "home_sp_era", "away_sp_era",
             "home_sp_whip", "away_sp_whip",
+            "home_sp_k9", "away_sp_k9",
+            "home_sp_bb9", "away_sp_bb9",
+            "home_sp_last3_era", "away_sp_last3_era",
             "home_bullpen_era", "away_bullpen_era",
             "home_lineup_ops", "away_lineup_ops",
             "venue_run_factor",
-            "home_sp_vs_away_lineup",
-            "away_sp_vs_home_lineup",
             "home_offense_vs_away_bullpen",
             "away_offense_vs_home_bullpen",
+            "total_sp_era",
+            "total_lineup_ops",
+            "total_sp_k9",
         ]
 
         self.ml_categorical = [
@@ -65,7 +72,11 @@ class PredictionService:
         numeric_features = {k: v for k, v in features.items()
                             if k in self.numeric_feature_cols}
         X = pd.DataFrame([numeric_features], columns=self.numeric_feature_cols)
-        prediction = self.totals_model.predict(X)[0]
+        X_imputed = pd.DataFrame(
+            self.totals_imputer.transform(X),
+            columns=self.numeric_feature_cols,
+        )
+        prediction = self.totals_model.predict(X_imputed)[0]
         return round(float(prediction), 2)
 
     def recommend_bet(self, features: dict, total_line: float, threshold: float = 0.5) -> dict:
