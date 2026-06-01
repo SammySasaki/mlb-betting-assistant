@@ -15,6 +15,7 @@ class Game(Base):
     away_team = Column(String, nullable=False)
     venue = Column(String)
     start_hour_utc = Column(Integer)
+    timestamp_utc = Column(DateTime(timezone=True))
     total_runs = Column(Float)  # sum of both teams’ final score
     home_score = Column(Integer)
     away_score = Column(Integer)

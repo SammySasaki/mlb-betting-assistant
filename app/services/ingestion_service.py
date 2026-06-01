@@ -348,6 +348,7 @@ class MLBIngestionService:
                 home_team=home_team,
                 away_team=away_team,
                 start_hour_utc=start_hour_utc,
+                timestamp_utc=dt,
                 home_probable_pitcher_id=home_pid,
                 away_probable_pitcher_id=away_pid,
                 venue=game_data.get("venue", {}).get("name"),
@@ -361,6 +362,7 @@ class MLBIngestionService:
             existing.home_probable_pitcher_id = home_pid
         if existing.away_probable_pitcher_id is None and away_pid:
             existing.away_probable_pitcher_id = away_pid
+        existing.timestamp_utc = dt
         return existing
 
     def _ensure_player_in_db(self, session: Session, player_id: int, team: str) -> None:
@@ -405,6 +407,7 @@ class MLBIngestionService:
                 home_score=home_score,
                 away_score=away_score,
                 start_hour_utc=start_hour_utc,
+                timestamp_utc=dt,
                 total_runs=total_runs,
                 venue=game_data.get("venue", {}).get("name"),
                 season_year=season_year,
@@ -416,8 +419,8 @@ class MLBIngestionService:
         existing.home_score = home_score
         existing.away_score = away_score
         existing.total_runs = total_runs
-        if existing.start_hour_utc is None:
-            existing.start_hour_utc = start_hour_utc
+        existing.start_hour_utc = start_hour_utc
+        existing.timestamp_utc = dt
         if existing.season_year is None:
             existing.season_year = season_year
         return existing
