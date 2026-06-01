@@ -181,6 +181,8 @@ class FeatureExtractor:
             away_pf.last3_era if away_pf and away_pf.last3_era is not None else self.NEW_PITCHER_ERA
         )
 
+        features["hr_total_runs_line"] = game.hr_total_runs_line
+
         # Interaction features — same-unit combinations only
         features["home_offense_vs_away_bullpen"] = features["home_avg_runs_lastx_total"] - features["away_bullpen_era"]
         features["away_offense_vs_home_bullpen"] = features["away_avg_runs_lastx_total"] - features["home_bullpen_era"]

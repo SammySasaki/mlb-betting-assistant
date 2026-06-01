@@ -10,9 +10,9 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Trained ML model artifacts
-*.pkl
-*.joblib
+# Trained ML model artifacts — tracked in git so Railway has them on deploy
+# *.pkl
+# *.joblib
 
 # Generated images/plots
 *.png

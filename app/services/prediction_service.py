@@ -28,6 +28,7 @@ class PredictionService:
 
         # Must match training feature order exactly
         self.numeric_feature_cols = [
+            "hr_total_runs_line",
             "temperature",
             "wind_speed",
             "wind_flag",
