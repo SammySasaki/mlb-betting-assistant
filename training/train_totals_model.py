@@ -1,3 +1,4 @@
+import argparse
 import json
 import pandas as pd
 import numpy as np
@@ -13,6 +14,18 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--mode",
+    choices=["eval", "production"],
+    default="eval",
+    help=(
+        "eval: train 2022 through H1-2025 (< Jul 1), test on H2-2025 — honest accuracy estimate. "
+        "production: train on all complete data (2022-2025 + 2026 YTD) for deployment."
+    ),
+)
+args = parser.parse_args()
+
 
 game_features_query = text("""
     WITH game_base AS (
@@ -25,13 +38,18 @@ game_features_query = text("""
             g.away_team,
             g.venue,
             g.total_runs,
+            g.hr_total_runs_line,
             w.temperature,
             w.wind_speed,
             w.wind_direction,
             w.precipitation
         FROM games g
         LEFT JOIN weather w ON g.id = w.game_id
-        WHERE g.home_score IS NOT NULL AND g.away_score IS NOT NULL AND w.temperature IS NOT NULL
+        WHERE g.home_score IS NOT NULL
+          AND g.away_score IS NOT NULL
+          AND w.temperature IS NOT NULL
+          AND g.season_year >= 2022
+          AND g.hr_total_runs_line IS NOT NULL
     ),
 
     starting_pitchers AS (
@@ -379,37 +397,30 @@ def wind_flag_safe(angle):
 df["wind_flag"] = df["wind_rel_angle"].apply(wind_flag_safe)
 df["venue_run_factor"] = df["venue"].map(venue_run_factors).fillna(1.0)
 df["days_since_game"] = (pd.Timestamp.today().normalize() - df["date"]).dt.days
-df["sample_weight"] = np.exp(-df["days_since_game"] / 120)
+# 365-day half-life: 2022 games still carry meaningful weight (~20%) vs ~0% with 120-day
+df["sample_weight"] = np.exp(-df["days_since_game"] / 365)
 
-# Interaction features (same-unit combinations)
-# home_offense_vs_away_bullpen uses bullpen_era (consistent with inference)
-df["home_offense_vs_away_bullpen"] = df["home_avg_runs_lastx_total"] - df["away_bullpen_era"]
-df["away_offense_vs_home_bullpen"] = df["away_avg_runs_lastx_total"] - df["home_bullpen_era"]
-df["total_sp_era"] = df["home_sp_era"] + df["away_sp_era"]
+# Combined lineup OPS (total offensive strength, more stable than individual)
 df["total_lineup_ops"] = df["home_lineup_ops"] + df["away_lineup_ops"]
-df["total_sp_k9"] = df["home_sp_k9"] + df["away_sp_k9"]
 
+# Dropped: season-long ERA/WHIP/K9/BB9 (already priced into the Vegas line),
+# individual lineup OPS (using combined), mixed-unit interaction features,
+# total_sp_era/k9 (redundant — last3_era captures recent form better)
 numeric_feature_cols = [
-    "temperature",
+    "hr_total_runs_line",      # market anchor
+    "temperature",             # game-day weather
     "wind_speed",
     "wind_flag",
-    "home_avg_runs_vs_arm",
-    "away_avg_runs_vs_arm",
-    "home_avg_runs_lastx_total",
+    "venue_run_factor",        # park run factor
+    "home_avg_runs_lastx_total",   # recent team run-scoring form
     "away_avg_runs_lastx_total",
-    "home_sp_era", "away_sp_era",
-    "home_sp_whip", "away_sp_whip",
-    "home_sp_k9", "away_sp_k9",
-    "home_sp_bb9", "away_sp_bb9",
-    "home_sp_last3_era", "away_sp_last3_era",
-    "home_bullpen_era", "away_bullpen_era",
-    "home_lineup_ops", "away_lineup_ops",
-    "venue_run_factor",
-    "home_offense_vs_away_bullpen",
-    "away_offense_vs_home_bullpen",
-    "total_sp_era",
-    "total_lineup_ops",
-    "total_sp_k9",
+    "home_avg_runs_vs_arm",    # handedness matchup edge
+    "away_avg_runs_vs_arm",
+    "home_sp_last3_era",       # recent pitcher form (more current than season ERA)
+    "away_sp_last3_era",
+    "home_bullpen_era",        # bullpen quality
+    "away_bullpen_era",
+    "total_lineup_ops",        # combined offensive strength
 ]
 
 # Drop rows missing non-imputable columns
@@ -422,13 +433,38 @@ df = df[df["date"].dt.month >= 5]
 print(f"After filters: {len(df)} rows")
 print(f"Per season: {df.groupby('season_year').size().to_dict()}")
 
-# --- Target (raw runs — no log transform) ---
-y = df["total_runs"]
+# --- Vegas line correlation diagnostics ---
+print("\n--- hr_total_runs_line correlation with total_runs ---")
+for yr, grp in df.groupby("season_year"):
+    valid = grp[["hr_total_runs_line", "total_runs"]].dropna()
+    if len(valid) > 10:
+        corr = valid["hr_total_runs_line"].corr(valid["total_runs"])
+        print(f"  {yr}: n={len(valid):,}  corr={corr:.3f}")
+overall = df[["hr_total_runs_line", "total_runs"]].dropna()
+print(f"  Overall: n={len(overall):,}  corr={overall['hr_total_runs_line'].corr(overall['total_runs']):.3f}")
 
-# --- Temporal train/test split ---
-# Train on all seasons before 2025; test on 2025 (last complete season)
-train_mask = df["season_year"] < 2025
-test_mask = df["season_year"] == 2025
+# --- Target: residual from Vegas line ---
+# Model learns "how much will this game deviate from the market?"
+# At inference: predicted_total = hr_total_runs_line + model.predict(features)
+# Baseline (predict 0 always) == using the Vegas line directly.
+df["residual"] = df["total_runs"] - df["hr_total_runs_line"]
+y = df["residual"]
+
+# --- Train/test split ---
+EVAL_CUTOFF = pd.Timestamp("2025-07-01")
+
+if args.mode == "eval":
+    # Train on 2022 through H1-2025; test on H2-2025 (most recent unseen data)
+    train_mask = (df["season_year"] < 2025) | (
+        (df["season_year"] == 2025) & (df["date"] < EVAL_CUTOFF)
+    )
+    test_mask = (df["season_year"] == 2025) & (df["date"] >= EVAL_CUTOFF)
+    print(f"\nMode: eval — train 2022–Jun-2025, test Jul–Oct-2025")
+else:
+    # Production: train on all complete data for best 2026 predictions
+    train_mask = df["season_year"] <= 2026
+    test_mask = pd.Series(False, index=df.index)
+    print(f"\nMode: production — training on all seasons (2022-2026)")
 
 X_train_raw = df.loc[train_mask, numeric_feature_cols]
 X_test_raw = df.loc[test_mask, numeric_feature_cols]
@@ -446,7 +482,7 @@ X_train = pd.DataFrame(
     index=X_train_raw.index,
 )
 X_test = pd.DataFrame(
-    imputer.transform(X_test_raw),
+    imputer.transform(X_test_raw) if len(X_test_raw) > 0 else X_test_raw,
     columns=numeric_feature_cols,
     index=X_test_raw.index,
 )
@@ -471,7 +507,11 @@ model = XGBRegressor(
     n_jobs=-1,
 )
 
-eval_set = [(X_train_np, y_train_np), (X_test_np, y_test_np)]
+if args.mode == "eval":
+    eval_set = [(X_train_np, y_train_np), (X_test_np, y_test_np)]
+else:
+    eval_set = [(X_train_np, y_train_np)]
+
 model.fit(
     X_train_np,
     y_train_np,
@@ -480,38 +520,51 @@ model.fit(
     verbose=True,
 )
 
-# --- Evaluation ---
-y_pred = model.predict(X_test_np)
-y_test_actual = y_test_np
+# --- Evaluation (eval mode only) ---
+if args.mode == "eval":
+    y_pred = model.predict(X_test_np)
+    y_test_actual = y_test_np
 
-mae = mean_absolute_error(y_test_actual, y_pred)
-r2 = r2_score(y_test_actual, y_pred)
-best_round = model.best_iteration
+    mae = mean_absolute_error(y_test_actual, y_pred)
+    r2 = r2_score(y_test_actual, y_pred)
+    best_round = model.best_iteration
 
-print(f"\nTest MAE:  {mae:.3f}")
-print(f"Test R²:   {r2:.3f}")
-print(f"Best round: {best_round}")
+    # Baseline: always predict residual=0 (i.e., just use the Vegas line)
+    baseline_mae = mean_absolute_error(y_test_actual, np.zeros(len(y_test_actual)))
+    direction_acc = ((y_pred > 0) == (y_test_actual > 0)).mean()
 
-# --- Plots ---
-importances = model.feature_importances_
-sorted_idx = np.argsort(importances)
-plt.figure(figsize=(8, 7))
-plt.barh(np.array(numeric_feature_cols)[sorted_idx], importances[sorted_idx])
-plt.title("XGBoost Feature Importances (Totals Model)")
-plt.tight_layout()
-plt.savefig("app/models/importance.png")
-plt.close()
+    print(f"\nResidual test MAE:       {mae:.3f}  (predict=0 baseline: {baseline_mae:.3f})")
+    print(f"Edge vs Vegas line:      {baseline_mae - mae:+.3f} runs")
+    print(f"Over/under accuracy:     {direction_acc:.3f}  (random=0.500)")
+    print(f"Test R²:                 {r2:.3f}")
+    print(f"Best round:              {best_round}")
 
-plt.figure(figsize=(8, 6))
-plt.scatter(y_test_actual, y_pred, alpha=0.3)
-plt.plot([y_test_actual.min(), y_test_actual.max()],
-         [y_test_actual.min(), y_test_actual.max()], "r--")
-plt.xlabel("Actual Total Runs")
-plt.ylabel("Predicted Total Runs")
-plt.title(f"Actual vs. Predicted Total Runs (R² = {r2:.3f})")
-plt.tight_layout()
-plt.savefig("app/models/ActualvPredicted.png")
-plt.close()
+    importances = model.feature_importances_
+    sorted_idx = np.argsort(importances)
+    plt.figure(figsize=(8, 7))
+    plt.barh(np.array(numeric_feature_cols)[sorted_idx], importances[sorted_idx])
+    plt.title("XGBoost Feature Importances (Totals Model)")
+    plt.tight_layout()
+    plt.savefig("app/models/importance.png")
+    plt.close()
+
+    plt.figure(figsize=(8, 6))
+    plt.scatter(y_test_actual, y_pred, alpha=0.3)
+    plt.plot([y_test_actual.min(), y_test_actual.max()],
+             [y_test_actual.min(), y_test_actual.max()], "r--")
+    plt.xlabel("Actual Total Runs")
+    plt.ylabel("Predicted Total Runs")
+    plt.title(f"Actual vs. Predicted Total Runs (R² = {r2:.3f})")
+    plt.tight_layout()
+    plt.savefig("app/models/ActualvPredicted.png")
+    plt.close()
+else:
+    best_round = model.best_iteration
+    mae = None
+    r2 = None
+    baseline_mae = None
+    direction_acc = None
+    print(f"\nProduction training complete. Best round: {best_round}")
 
 # --- Save artifacts ---
 joblib.dump(model, "app/models/mlb_xgb_model.pkl")
@@ -519,20 +572,26 @@ joblib.dump(imputer, "app/models/totals_imputer.pkl")
 joblib.dump(numeric_feature_cols, "app/models/feature_names.pkl")
 
 train_seasons = sorted(df.loc[train_mask, "season_year"].unique().tolist())
-test_seasons = sorted(df.loc[test_mask, "season_year"].unique().tolist())
+test_seasons = sorted(df.loc[test_mask, "season_year"].unique().tolist()) if args.mode == "eval" else []
+test_cutoff = EVAL_CUTOFF.date().isoformat() if args.mode == "eval" else None
 
 metadata = {
     "trained_at": datetime.now(timezone.utc).isoformat(),
+    "mode": args.mode,
     "model": "XGBRegressor",
     "train_seasons": train_seasons,
     "test_seasons": test_seasons,
+    "eval_cutoff": test_cutoff,
     "train_games": int(len(X_train_raw)),
     "test_games": int(len(X_test_raw)),
     "features": numeric_feature_cols,
     "n_features": len(numeric_feature_cols),
     "best_round": int(best_round),
-    "test_mae": round(float(mae), 4),
-    "test_r2": round(float(r2), 4),
+    "target": "residual (total_runs - hr_total_runs_line)",
+    "test_residual_mae": round(float(mae), 4) if mae is not None else None,
+    "test_baseline_mae": round(float(baseline_mae), 4) if baseline_mae is not None else None,
+    "test_direction_accuracy": round(float(direction_acc), 4) if direction_acc is not None else None,
+    "test_r2": round(float(r2), 4) if r2 is not None else None,
     "hyperparameters": {
         "n_estimators": 600,
         "max_depth": 4,

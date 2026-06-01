@@ -32,21 +32,12 @@ class PredictionService:
             "temperature",
             "wind_speed",
             "wind_flag",
-            "home_avg_runs_vs_arm", "away_avg_runs_vs_arm",
+            "venue_run_factor",
             "home_avg_runs_lastx_total", "away_avg_runs_lastx_total",
-            "home_sp_era", "away_sp_era",
-            "home_sp_whip", "away_sp_whip",
-            "home_sp_k9", "away_sp_k9",
-            "home_sp_bb9", "away_sp_bb9",
+            "home_avg_runs_vs_arm", "away_avg_runs_vs_arm",
             "home_sp_last3_era", "away_sp_last3_era",
             "home_bullpen_era", "away_bullpen_era",
-            "home_lineup_ops", "away_lineup_ops",
-            "venue_run_factor",
-            "home_offense_vs_away_bullpen",
-            "away_offense_vs_home_bullpen",
-            "total_sp_era",
             "total_lineup_ops",
-            "total_sp_k9",
         ]
 
         self.ml_categorical = [
@@ -77,8 +68,11 @@ class PredictionService:
             self.totals_imputer.transform(X),
             columns=self.numeric_feature_cols,
         )
-        prediction = self.totals_model.predict(X_imputed)[0]
-        return round(float(prediction), 2)
+        # Model predicts residual (deviation from Vegas line).
+        # Add the line back to get the predicted total.
+        residual = self.totals_model.predict(X_imputed)[0]
+        line = features.get("hr_total_runs_line") or 0.0
+        return round(float(line + residual), 2)
 
     def recommend_bet(self, features: dict, total_line: float, threshold: float = 0.5) -> dict:
         predicted_total = self.predict_total_runs(features)

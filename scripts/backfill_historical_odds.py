@@ -48,7 +48,7 @@ import os
 import sys
 import time
 from collections import defaultdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from difflib import SequenceMatcher
 
 import requests
@@ -69,12 +69,13 @@ REGION = "us"
 DEFAULT_BOOKMAKER = "hardrockbet"
 # Fetched alongside the primary in every call at no extra credit cost.
 # hardrockbet is preferred; draftkings fills in when hardrockbet has no line.
-FALLBACK_BOOKMAKER = "draftkings"
+FALLBACK_BOOKMAKER = "draftkings,fanduel,pinnacle,betmgm,williamhill_us,bovada,betonlineag"
 BASE_URL = "https://api.the-odds-api.com/v4"
 # Both markets in one call — halves credit usage vs two separate calls.
 MARKETS = "totals,h2h"
-# Minutes past the start hour to snapshot — lines are final by then.
-SNAPSHOT_OFFSET_MINUTES = 5
+# Minutes relative to first pitch for the odds snapshot.
+# Negative = before game (pre-game closing line). Positive = after first pitch (in-game).
+SNAPSHOT_OFFSET_MINUTES = -30
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +103,12 @@ def parse_args() -> argparse.Namespace:
                    help="Print plan without making any API calls or DB writes")
     p.add_argument("--delay", type=float, default=0.5,
                    help="Seconds to sleep between API calls (default: 0.5)")
+    p.add_argument("--max-empty-slots", type=int, default=30,
+                   help="Stop after this many consecutive slots with zero results (default: 30)")
+    p.add_argument("--totals-only", action="store_true",
+                   help="Only fetch totals lines, skip ML. Filters to games missing hr_total_runs_line.")
+    p.add_argument("--game-ids-file", metavar="PATH",
+                   help="JSON file containing a list of game IDs to backfill (ignores scope filters)")
     return p.parse_args()
 
 
@@ -180,9 +187,14 @@ def apply_totals(game: Game, odds_entry: dict, bookmakers: list[str]) -> tuple[b
     """
     bk, bk_key = find_bookmaker_data(odds_entry, bookmakers)
     if not bk:
+        available = [b["key"] for b in odds_entry.get("bookmakers", [])]
+        log.debug("  No bookmaker match for totals — available in response: %s", available)
         return False, None
     market = next((m for m in bk["markets"] if m["key"] == "totals"), None)
     if not market:
+        available_markets = [m["key"] for m in bk.get("markets", [])]
+        log.warning("  %s has no totals market for %s @ %s — markets available: %s",
+                    bk_key, odds_entry.get("away_team"), odds_entry.get("home_team"), available_markets)
         return False, None
 
     total_line = over_price = under_price = None
@@ -244,24 +256,34 @@ def main() -> None:
     with SessionLocal() as session:
         query = session.query(Game)
 
-        # Scope filter
-        if args.season:
-            query = query.filter(Game.season_year == args.season)
-        elif args.start and args.end:
-            query = query.filter(Game.date >= args.start, Game.date <= args.end)
+        if args.game_ids_file:
+            import json
+            with open(args.game_ids_file) as f:
+                game_ids = json.load(f)
+            log.info("Loaded %d game IDs from %s", len(game_ids), args.game_ids_file)
+            query = query.filter(Game.id.in_(game_ids))
         else:
-            # Default: all historical seasons
-            query = query.filter(Game.season_year.between(2021, 2024))
+            # Scope filter
+            if args.season:
+                query = query.filter(Game.season_year == args.season)
+            elif args.start and args.end:
+                query = query.filter(Game.date >= args.start, Game.date <= args.end)
+            else:
+                # Default: all seasons in DB
+                query = query.filter(Game.season_year >= 2021)
 
-        # Skip games that already have complete odds unless --overwrite
-        if not args.overwrite:
-            query = query.filter(
-                or_(
-                    Game.hr_total_runs_line.is_(None),
-                    Game.home_ml_price.is_(None),
-                    Game.away_ml_price.is_(None),
-                )
-            )
+            # Skip games that already have the requested odds unless --overwrite
+            if not args.overwrite:
+                if args.totals_only:
+                    query = query.filter(Game.hr_total_runs_line.is_(None))
+                else:
+                    query = query.filter(
+                        or_(
+                            Game.hr_total_runs_line.is_(None),
+                            Game.home_ml_price.is_(None),
+                            Game.away_ml_price.is_(None),
+                        )
+                    )
 
         games = query.order_by(Game.date, Game.start_hour_utc).all()
 
@@ -275,43 +297,57 @@ def main() -> None:
     # Games with NULL start_hour_utc default to 18 UTC (1 pm ET / typical day game).
     slots: dict[tuple[date, int], list[Game]] = defaultdict(list)
     for game in games:
-        hour = game.start_hour_utc if game.start_hour_utc is not None else 18
-        slots[(game.date, hour)].append(game)
+        if game.timestamp_utc is not None:
+            # Use the authoritative UTC datetime — no guessing needed.
+            slot_date = game.timestamp_utc.date()
+            hour = game.timestamp_utc.hour
+        else:
+            hour = game.start_hour_utc if game.start_hour_utc is not None else 18
+            slot_date = game.date + timedelta(days=1) if hour < 12 else game.date
+        slots[(slot_date, hour)].append(game)
 
     log.info("Grouped into %d unique start-time slots (~%d API calls).",
              len(slots), len(slots))
 
     if args.dry_run:
         log.info("--- DRY RUN — no API calls or DB writes ---")
-        for (d, h), gs in sorted(slots.items()):
+        for (d, h), gs in sorted(slots.items(), reverse=True):
+            snap = datetime(d.year, d.month, d.day, h, 0, 0, tzinfo=timezone.utc) + timedelta(minutes=SNAPSHOT_OFFSET_MINUTES)
             matchups = ", ".join(f"{g.away_team}@{g.home_team}" for g in gs)
-            log.info("  %s %02d:05 UTC — %d game(s): %s", d, h, len(gs), matchups)
+            log.info("  %s — %d game(s): %s", snap.strftime("%Y-%m-%d %H:%M UTC"), len(gs), matchups)
         return
 
-    # Priority-ordered bookmaker list: primary first, fallback second.
-    # Both are requested in one API call; primary is preferred per game.
+    # Priority-ordered bookmaker list: primary first, fallbacks after.
+    # All are requested in one API call at no extra credit cost.
     bookmakers = [args.bookmaker]
-    if args.fallback and args.fallback != args.bookmaker:
-        bookmakers.append(args.fallback)
+    for bk in args.fallback.split(","):
+        bk = bk.strip()
+        if bk and bk != args.bookmaker:
+            bookmakers.append(bk)
 
     log.info("Bookmaker priority: %s", " → ".join(bookmakers))
 
     # Process slots
     stats = {"totals": 0, "ml": 0, "no_match": 0, "api_errors": 0, "fallback_used": 0}
+    consecutive_empty = 0
+    prev_cumulative = 0
 
     with SessionLocal() as session:
         # Re-attach games to this session for writing
         game_ids = {g.id for g in games}
 
-        for (game_date, start_hour), slot_games in sorted(slots.items()):
-            snapshot_utc = datetime(
+        for (game_date, start_hour), slot_games in sorted(slots.items(), reverse=True):
+            # game_date is already the correct UTC date (from timestamp_utc.date()
+            # or the < 12 heuristic for games without timestamp_utc).
+            game_start_utc = datetime(
                 game_date.year, game_date.month, game_date.day,
-                start_hour, SNAPSHOT_OFFSET_MINUTES, 0,
+                start_hour, 0, 0,
                 tzinfo=timezone.utc,
             )
+            snapshot_utc = game_start_utc + timedelta(minutes=SNAPSHOT_OFFSET_MINUTES)
 
-            log.info("Fetching %s %02d:%02d UTC (%d games)...",
-                     game_date, start_hour, SNAPSHOT_OFFSET_MINUTES, len(slot_games))
+            log.info("Fetching snapshot %s (%d games)...",
+                     snapshot_utc.strftime("%Y-%m-%d %H:%M UTC"), len(slot_games))
 
             try:
                 odds_data = fetch_historical_odds(api_key, snapshot_utc, bookmakers)
@@ -356,8 +392,8 @@ def main() -> None:
                     continue
 
                 needs_totals = args.overwrite or db_game.hr_total_runs_line is None
-                needs_ml = args.overwrite or (
-                    db_game.home_ml_price is None or db_game.away_ml_price is None
+                needs_ml = (not args.totals_only) and (
+                    args.overwrite or db_game.home_ml_price is None or db_game.away_ml_price is None
                 )
 
                 if needs_totals:
@@ -388,9 +424,26 @@ def main() -> None:
                                       db_game.away_team, db_game.home_team,
                                       db_game.home_ml_price, db_game.away_ml_price)
 
+            slot_total = stats["totals"] + stats["ml"]
             session.commit()
+
+            if slot_total > prev_cumulative:
+                consecutive_empty = 0
+            else:
+                consecutive_empty += 1
+            prev_cumulative = slot_total
+
             log.info("  Slot committed. Cumulative — totals: %(totals)d  ML: %(ml)d  "
                      "fallback: %(fallback_used)d  no_match: %(no_match)d  errors: %(api_errors)d", stats)
+
+            if consecutive_empty >= args.max_empty_slots:
+                log.warning(
+                    "Stopping — %d consecutive slots with zero results. "
+                    "Bookmakers likely have no coverage before %s.",
+                    consecutive_empty, game_date,
+                )
+                break
+
             time.sleep(args.delay)
 
     log.info(
