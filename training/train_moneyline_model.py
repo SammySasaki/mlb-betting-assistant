@@ -12,21 +12,7 @@ from sklearn.metrics import accuracy_score, roc_auc_score, log_loss, brier_score
 import joblib
 import xgboost as xgb
 from infra.db.init_db import engine
-
-
-class PlattCalibratedPipeline:
-    """Preprocessor → XGBoost → Platt sigmoid calibration, saveable with joblib."""
-    def __init__(self, preprocessor, xgb_clf, platt):
-        self.preprocessor = preprocessor
-        self.xgb_clf      = xgb_clf
-        self.platt        = platt  # LogisticRegression fit on logit(raw_prob)
-
-    def predict_proba(self, X_raw):
-        X_enc   = self.preprocessor.transform(X_raw)
-        raw     = self.xgb_clf.predict_proba(X_enc)[:, 1]
-        logit   = np.log(raw.clip(1e-9, 1 - 1e-9) / (1 - raw.clip(1e-9, 1 - 1e-9)))
-        cal     = self.platt.predict_proba(logit.reshape(-1, 1))[:, 1]
-        return np.column_stack([1 - cal, cal])
+from app.ml.calibration import PlattCalibratedPipeline  # noqa: F401 — needed for joblib round-trip
 
 EVAL_CUTOFF = pd.Timestamp("2025-07-01")
 
