@@ -45,20 +45,12 @@ class PredictionService:
             "home_throwing_hand", "away_throwing_hand",
         ]
         self.ml_numerical = [
-            "home_implied_prob",
             "logit_market",
-            "home_sp_era",              "away_sp_era",
-            "home_sp_whip",             "away_sp_whip",
-            "home_sp_last3_era",        "away_sp_last3_era",
             "home_sp_era_trend",        "away_sp_era_trend",
-            "home_bullpen_era",         "away_bullpen_era",
-            "home_lineup_ops",          "away_lineup_ops",
-            "home_avg_runs_lastx_total","away_avg_runs_lastx_total",
-            "home_avg_runs_vs_arm",     "away_avg_runs_vs_arm",
-            "home_season_win_rate",     "away_season_win_rate",
-            "home_run_diff",            "away_run_diff",
             "home_momentum",            "away_momentum",
-            "sp_era_diff",              "lineup_ops_diff",
+            "home_bullpen_era",         "away_bullpen_era",
+            "home_avg_runs_vs_arm",     "away_avg_runs_vs_arm",
+            "home_avg_runs_lastx_total","away_avg_runs_lastx_total",
         ]
 
     # ----------------------------
