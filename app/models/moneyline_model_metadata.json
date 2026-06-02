@@ -1,0 +1,44 @@
+{
+  "mode": "eval",
+  "trained_date": "2026-06-02",
+  "train_games": 6961,
+  "test_games": 1158,
+  "eval_cutoff": "2025-07-01",
+  "features_categorical": [
+    "home_throwing_hand",
+    "away_throwing_hand"
+  ],
+  "features_numerical": [
+    "logit_market",
+    "home_sp_era_trend",
+    "away_sp_era_trend",
+    "home_momentum",
+    "away_momentum",
+    "home_bullpen_era",
+    "away_bullpen_era",
+    "home_avg_runs_vs_arm",
+    "away_avg_runs_vs_arm",
+    "home_avg_runs_lastx_total",
+    "away_avg_runs_lastx_total"
+  ],
+  "xgb_best_round": 5,
+  "calibration": "platt_sigmoid",
+  "logreg_test": {
+    "accuracy": 0.542314335060449,
+    "roc_auc": 0.5660513749580074,
+    "log_loss": 0.6846762416505554,
+    "brier": 0.24584318529874022
+  },
+  "xgb_raw_test": {
+    "accuracy": 0.5449050086355786,
+    "roc_auc": 0.5658939026731294,
+    "log_loss": 0.6907574873081489,
+    "brier": 0.24880553027001986
+  },
+  "xgb_calibrated_test": {
+    "accuracy": 0.5552677029360967,
+    "roc_auc": 0.5658939026731294,
+    "log_loss": 0.6881991449556205,
+    "brier": 0.2475298131068228
+  }
+}

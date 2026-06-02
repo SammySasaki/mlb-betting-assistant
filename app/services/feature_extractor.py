@@ -116,6 +116,45 @@ class FeatureExtractor:
         features["home_avg_runs_vs_arm"] = self._runs_vs_arm(game.home_team, game.away_probable_pitcher, game.date, game.season_year, home=True)
         features["away_avg_runs_vs_arm"] = self._runs_vs_arm(game.away_team, game.home_probable_pitcher, game.date, game.season_year, home=False)
 
+        # --- Market-implied probability (vig-removed) ---
+        home_ml = game.home_ml_price
+        away_ml = game.away_ml_price
+        features["home_ml_price"] = home_ml
+        features["away_ml_price"] = away_ml
+        if home_ml and away_ml and home_ml > 0 and away_ml > 0:
+            raw_home = 1.0 / home_ml
+            raw_away = 1.0 / away_ml
+            imp = raw_home / (raw_home + raw_away)
+            features["home_implied_prob"] = imp
+            features["logit_market"] = float(np.log(imp / (1 - imp)))
+        else:
+            features["home_implied_prob"] = np.nan
+            features["logit_market"] = np.nan
+
+        # --- Pitcher ERA trend (recent vs season — positive = getting worse) ---
+        features["home_sp_era_trend"] = (
+            features.get("home_sp_last3_era", self.NEW_PITCHER_ERA) -
+            features.get("home_sp_era", self.NEW_PITCHER_ERA)
+        )
+        features["away_sp_era_trend"] = (
+            features.get("away_sp_last3_era", self.NEW_PITCHER_ERA) -
+            features.get("away_sp_era", self.NEW_PITCHER_ERA)
+        )
+
+        # --- Win rate and momentum ---
+        hw, hl = features.get("home_team_wins", 0) or 0, features.get("home_team_losses", 0) or 0
+        aw, al = features.get("away_team_wins", 0) or 0, features.get("away_team_losses", 0) or 0
+        features["home_season_win_rate"] = hw / (hw + hl) if (hw + hl) > 0 else np.nan
+        features["away_season_win_rate"] = aw / (aw + al) if (aw + al) > 0 else np.nan
+        features["home_momentum"] = (
+            (features.get("home_team_wins_last10", 0) or 0) / 10.0 - features["home_season_win_rate"]
+            if not np.isnan(features["home_season_win_rate"]) else np.nan
+        )
+        features["away_momentum"] = (
+            (features.get("away_team_wins_last10", 0) or 0) / 10.0 - features["away_season_win_rate"]
+            if not np.isnan(features["away_season_win_rate"]) else np.nan
+        )
+
         # --- Derived / interaction features ---
         if home_sp and away_sp:
             home_era = home_sp.sp_era if home_sp.sp_era is not None else self.NEW_PITCHER_ERA
@@ -123,9 +162,7 @@ class FeatureExtractor:
             features["sp_era_diff"] = home_era - away_era
         else:
             features["sp_era_diff"] = 0.0
-        features["run_diff_diff"] = (home_team_feats.run_diff_season or 0) - (away_team_feats.run_diff_season or 0)
         features["lineup_ops_diff"] = features["home_lineup_ops"] - features["away_lineup_ops"]
-
 
         return features
 
