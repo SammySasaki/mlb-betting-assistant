@@ -48,7 +48,9 @@ class SqlAlchemyNewsRepository(INewsRepository):
         q = self.session.query(NewsItem)
         if category:
             q = q.filter(NewsItem.category == category)
-        return q.order_by(NewsItem.published_at.desc()).limit(limit).all()
+        from sqlalchemy import func as sqlfunc
+        sort_col = sqlfunc.coalesce(NewsItem.published_at, NewsItem.scraped_at)
+        return q.order_by(sort_col.desc()).limit(limit).all()
 
     def get_recent_by_teams(self, teams: list[str], hours: int = 24) -> list[NewsItem]:
         if not teams:

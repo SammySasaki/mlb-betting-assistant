@@ -68,7 +68,7 @@ def render() -> None:
 
     for alert in alerts:
         source_badge = f"`{alert.source.upper()}`"
-        ts = alert.published_at[:16].replace("T", " ") if alert.published_at else "—"
+        ts = alert.display_ts
         teams_str = "  ·  ".join(alert.teams) if alert.teams else ""
         category_badge = f"`{alert.category}`" if alert.category else ""
 

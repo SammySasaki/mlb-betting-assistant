@@ -71,8 +71,14 @@ class NewsAlert:
     headline: str
     category: Optional[str]
     published_at: Optional[str]
+    scraped_at: Optional[str]
     url: str
     teams: list = field(default_factory=list)
+
+    @property
+    def display_ts(self) -> str:
+        ts = self.published_at or self.scraped_at
+        return ts[:16].replace("T", " ") if ts else "—"
 
     @classmethod
     def from_dict(cls, data: dict) -> "NewsAlert":
@@ -82,6 +88,7 @@ class NewsAlert:
             headline=data["headline"],
             category=data.get("category"),
             published_at=data.get("published_at"),
+            scraped_at=data.get("scraped_at"),
             url=data.get("url", ""),
             teams=data.get("teams") or [],
         )

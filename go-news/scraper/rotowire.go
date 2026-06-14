@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -42,6 +43,13 @@ func ScrapeRotowire() []Article {
 		playerName := strings.TrimSpace(s.Find("a.news-update__player-link").Text())
 		body := strings.TrimSpace(s.Find(".news-update__news").Text())
 
+		publishedAt := ""
+		if ts := strings.TrimSpace(s.Find(".news-update__timestamp").Text()); ts != "" {
+			if t, err := time.Parse("January 2, 2006", ts); err == nil {
+				publishedAt = t.Format(time.RFC3339)
+			}
+		}
+
 		href, _ := s.Find("a.news-update__headline").Attr("href")
 		url := href
 		if url != "" && !strings.HasPrefix(url, "http") {
@@ -56,12 +64,13 @@ func ScrapeRotowire() []Article {
 		}
 
 		articles = append(articles, Article{
-			Source:     "rotowire",
-			Headline:   headline,
-			Body:       body,
-			URL:        url,
-			Category:   categorize(headline + " " + body),
-			PlayerName: playerName,
+			Source:      "rotowire",
+			Headline:    headline,
+			Body:        body,
+			URL:         url,
+			PublishedAt: publishedAt,
+			Category:    categorize(headline + " " + body),
+			PlayerName:  playerName,
 		})
 	})
 
