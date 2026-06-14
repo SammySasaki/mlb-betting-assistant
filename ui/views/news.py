@@ -60,6 +60,12 @@ def render() -> None:
         st.info("No news stored yet. Click **Scrape Latest News** to fetch articles.")
         return
 
+    dates = [a.published_at[:10] for a in alerts if a.published_at]
+    if dates:
+        oldest, newest = min(dates), max(dates)
+        label = f"Showing {len(alerts)} articles · {oldest} – {newest}" if oldest != newest else f"Showing {len(alerts)} articles · {newest}"
+        st.caption(label)
+
     for alert in alerts:
         source_badge = f"`{alert.source.upper()}`"
         ts = alert.published_at[:16].replace("T", " ") if alert.published_at else "—"
