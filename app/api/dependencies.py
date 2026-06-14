@@ -19,6 +19,9 @@ from app.implementations.sqlalchemy_lineup_repository import SQLAlchemyLineupRep
 from app.implementations.mlb_api_client import StatsApiClient
 from app.implementations.sqlalchemy_player_season_stats_repository import SQLAlchemyPlayerSeasonStatsRepository
 from app.services.season_stats_service import SeasonStatsService
+from app.services.news_service import NewsService
+from app.implementations.go_news_client import GoNewsClient
+from app.implementations.sqlalchemy_news_repository import SqlAlchemyNewsRepository
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -85,3 +88,9 @@ def get_season_stats_repo(
 def get_season_stats_service(session: Session = Depends(get_db)) -> SeasonStatsService:
     repo = SQLAlchemyPlayerSeasonStatsRepository(session)
     return SeasonStatsService(session, repo)
+
+
+def get_news_service(session: Session = Depends(get_db)) -> NewsService:
+    client = GoNewsClient()
+    repo = SqlAlchemyNewsRepository(session)
+    return NewsService(client, repo, session)

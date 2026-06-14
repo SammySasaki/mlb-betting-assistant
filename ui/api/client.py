@@ -13,7 +13,7 @@ import os
 
 import requests
 
-from ui.api.models import Game, Prediction
+from ui.api.models import Game, Prediction, NewsAlert
 
 API_BASE = os.getenv("API_BASE_URL", "http://localhost:8000")
 
@@ -58,3 +58,12 @@ def get_predictions(
     )
     resp.raise_for_status()
     return [Prediction.from_dict(p) for p in resp.json()]
+
+
+def get_game_news(game_id: int) -> list[NewsAlert]:
+    resp = requests.get(
+        f"{API_BASE}/news/game/{game_id}",
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return [NewsAlert.from_dict(a) for a in resp.json()]

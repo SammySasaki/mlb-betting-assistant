@@ -34,11 +34,14 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - db
+      - go-news
     command: ["sh", "-c", "python infra/db/wait_for_postgres.py && python infra/db/init_db.py && uvicorn app.api.main:app --host 0.0.0.0 --port 8000 --reload"]
     ports:
       - "8000:8000"
     volumes:
       - .:/app
+    environment:
+      - GO_NEWS_URL=http://go-news:8092
     env_file:
       - .env
 
@@ -57,6 +60,14 @@ services:
       - API_BASE_URL=http://app:8000
     env_file:
       - .env
+
+  go-news:
+    build:
+      context: ./go-news
+      dockerfile: Dockerfile
+    ports:
+      - "8092:8092"
+    restart: on-failure
 
 volumes:
   pgdata:

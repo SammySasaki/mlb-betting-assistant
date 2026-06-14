@@ -12,8 +12,8 @@ from typing import Optional
 import pandas as pd
 import streamlit as st
 
-from ui.api.client import get_games, get_predictions
-from ui.api.models import Game, Prediction
+from ui.api.client import get_games, get_predictions, get_game_news
+from ui.api.models import Game, Prediction, NewsAlert
 
 
 # ── Formatting helpers ────────────────────────────────────────────────────────
@@ -101,11 +101,21 @@ def _render_h2h_prediction(pred: Prediction, game: Game) -> None:
     )
 
 
+def _render_news_alerts(game_id: int) -> None:
+    try:
+        alerts = get_game_news(game_id)
+    except Exception:
+        return
+    for alert in alerts:
+        st.warning(f"**[{alert.source.upper()} – {alert.category or 'NEWS'}]** {alert.headline}")
+
+
 def _render_game_card(game: Game, preds: list[Prediction]) -> None:
     start_str = f"{game.start_hour_utc:02d}:00 UTC" if game.start_hour_utc is not None else "TBD"
     header = f"**{game.away_team}  @  {game.home_team}**  —  {start_str}  |  {game.venue or '—'}"
 
     with st.expander(header, expanded=True):
+        _render_news_alerts(game.id)
         _render_odds_row(game)
         st.markdown("---")
         for pred in sorted(preds, key=lambda p: p.market):

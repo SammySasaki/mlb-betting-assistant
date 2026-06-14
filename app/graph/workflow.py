@@ -5,8 +5,7 @@ from app.agents.stats_agent import StatsAgent
 from app.agents.live_stat_agent import LiveStatAgent
 from app.agents.predictor_agent import MLBPredictionAgent
 from app.agents.lineup_agent import LineupAgent
-# from agents.reasoning_agent import ReasoningAgent
-# from agents.strategy_agent import StrategyAgent
+from app.agents.news_agent import NewsAgent
 import os
 from openai import OpenAI
 from app.implementations.openai_client import OpenAILLMClient
@@ -31,6 +30,8 @@ def classifier_router(state: GraphState) -> str:
         return "RECOMMENDATION"
     elif intent == "LINEUP":
         return "LINEUP"
+    elif intent == "NEWS":
+        return "NEWS"
     else:
         return "END"
 
@@ -50,7 +51,8 @@ def build_graph():
     live_stat_agent = LiveStatAgent(mlb_api_client, openai_client, player_repository)
     lineup_agent = LineupAgent(player_repository, lineup_repository, openai_client, lineup_service, game_repository)
     prediction_agent = MLBPredictionAgent(openai_client=openai_client, db_session=db)
-    
+    news_agent = NewsAgent(openai_client=openai_client, db_session=db)
+
     graph = StateGraph(GraphState)
 
     # --- Nodes ---
@@ -60,6 +62,7 @@ def build_graph():
     graph.add_node("live_stat_agent", live_stat_agent.handle_request)
     graph.add_node("prediction_agent", prediction_agent.handle_request)
     graph.add_node("lineup_agent", lineup_agent.handle_request)
+    graph.add_node("news_agent", news_agent.handle_request)
 
     # --- Flow ---
     # 1. Classifier runs → produces state with `intent`
@@ -72,11 +75,13 @@ def build_graph():
             "LIVE_STAT": "live_stat_agent",
             "RECOMMENDATION": "prediction_agent",
             "LINEUP": "lineup_agent",
+            "NEWS": "news_agent",
             "END": END
         },
     )
 
     graph.add_edge("stat_agent", END)
     graph.add_edge("live_stat_agent", END)
+    graph.add_edge("news_agent", END)
 
     return graph.compile()

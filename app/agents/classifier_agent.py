@@ -4,7 +4,7 @@ import os
 from app.graph.state import GraphState
 from app.interfaces.illm_client import ILLMClient
 
-CATEGORIES = ["STAT", "LIVE_STAT", "RECOMMENDATION", "LINEUP", "OBSERVATION", "OTHER"]
+CATEGORIES = ["STAT", "LIVE_STAT", "RECOMMENDATION", "LINEUP", "OBSERVATION", "NEWS", "OTHER"]
 SYSTEM_PROMPT = "You are a sports betting analyst assistant."
 
 class ClassifierAgent:
@@ -38,6 +38,10 @@ class ClassifierAgent:
         - "Who is batting 1st for the Yankees today?" → LINEUP
         - "Who is playing shortstop for the Dodgers today?" → LINEUP
         - "Who is starting for the Giants today?" → LINEUP
+        - "Any injury news on the Dodgers?" → NEWS
+        - "What happened with Ohtani?" → NEWS
+        - "Any lineup changes today?" → NEWS
+        - "Latest transactions this week?" → NEWS
 
         Message: "{user_message}"
         Answer with just the category name.

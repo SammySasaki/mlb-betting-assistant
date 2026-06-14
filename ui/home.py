@@ -8,6 +8,7 @@ import streamlit as st
 
 from ui.views import predictions as predictions_view
 from ui.views import chat as chat_view
+from ui.views import news as news_view
 
 st.set_page_config(
     page_title="Sports Betting",
@@ -16,11 +17,13 @@ st.set_page_config(
 )
 
 with st.sidebar:
-    page = st.radio("Navigation", ["Predictions", "Chat"], label_visibility="collapsed")
+    page = st.radio("Navigation", ["Predictions", "Chat", "News"], label_visibility="collapsed")
 
 st.title("Sports Betting Dashboard")
 
 if page == "Predictions":
     predictions_view.render()
+elif page == "News":
+    news_view.render()
 else:
     chat_view.render()

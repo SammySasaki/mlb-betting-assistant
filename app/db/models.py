@@ -1,6 +1,7 @@
 from sqlalchemy import (
-    Column, Integer, String, Float, Date, DateTime, ForeignKey, Time, Boolean, func, UniqueConstraint
+    Column, Integer, String, Float, Date, DateTime, ForeignKey, Time, Boolean, func, UniqueConstraint, Text
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -252,3 +253,22 @@ class PlayerSeasonStats(Base):
     updated_at = Column(DateTime, server_default=func.now())
 
     player = relationship("Player", back_populates="season_stats")
+
+
+class NewsItem(Base):
+    __tablename__ = "news_items"
+
+    id           = Column(Integer, primary_key=True)
+    source       = Column(String(50), nullable=False)       # 'rotowire' | 'mlb_com' | 'espn'
+    headline     = Column(String, nullable=False)
+    body         = Column(Text)
+    url          = Column(String, unique=True, nullable=False)  # dedup key
+    published_at = Column(DateTime(timezone=True))
+    scraped_at   = Column(DateTime(timezone=True), server_default=func.now())
+    category     = Column(String(20))                       # 'INJURY' | 'LINEUP' | 'TRANSACTION' | 'GENERAL'
+    teams        = Column(ARRAY(String))                    # matched MLB team names found in article
+    player_id    = Column(Integer, ForeignKey("players.id"), nullable=True)
+    game_id      = Column(Integer, ForeignKey("games.id"), nullable=True)
+
+    player = relationship("Player")
+    game   = relationship("Game")

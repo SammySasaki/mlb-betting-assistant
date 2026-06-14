@@ -1,6 +1,6 @@
 """UI-side data models for the Sports Betting API responses."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -61,4 +61,27 @@ class Prediction:
             away_win_prob=data.get("away_win_prob"),
             recommendation=data.get("recommendation"),
             edge=data.get("edge"),
+        )
+
+
+@dataclass(frozen=True)
+class NewsAlert:
+    id: int
+    source: str
+    headline: str
+    category: Optional[str]
+    published_at: Optional[str]
+    url: str
+    teams: list = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "NewsAlert":
+        return cls(
+            id=data["id"],
+            source=data["source"],
+            headline=data["headline"],
+            category=data.get("category"),
+            published_at=data.get("published_at"),
+            url=data.get("url", ""),
+            teams=data.get("teams") or [],
         )
