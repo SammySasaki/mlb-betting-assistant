@@ -20,7 +20,7 @@ def _scrape_news() -> dict | None:
 
 
 def _load_recent(category: str | None) -> list[NewsAlert]:
-    params: dict = {"limit": 50}
+    params: dict = {"limit": 100}
     if category:
         params["category"] = category
     try:
