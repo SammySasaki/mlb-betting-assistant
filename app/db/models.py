@@ -174,6 +174,7 @@ class Lineups(Base):
     game_id = Column(Integer, ForeignKey("games.id", ondelete="CASCADE"), nullable=False)
     batting_order = Column(Integer, nullable=False)
     player_id = Column(Integer, ForeignKey("players.id"), nullable=False)
+    team = Column(String, nullable=True)
 
     defensive_position = Column(String(3), nullable=True)
 
@@ -191,7 +192,7 @@ class Lineups(Base):
     player = relationship("Player", back_populates="lineup_entries")
 
     __table_args__ = (
-        UniqueConstraint("game_id", "batting_order", name="uq_lineup_slot"),
+        UniqueConstraint("game_id", "batting_order", "team", name="uq_lineup_slot"),
     )
 
 

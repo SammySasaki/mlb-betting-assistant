@@ -2,10 +2,8 @@
 LiveStatAgent — routes player season stats and league leader queries
 directly to the MLB Stats API rather than aggregating from the local DB.
 """
-import json
-import re
-
 from app.graph.state import GraphState
+from app.utils.utils import llm_call_with_retry
 from app.interfaces.illm_client import ILLMClient
 from app.implementations.mlb_api_client import StatsApiClient
 from app.interfaces.iplayer_repository import IPlayerRepository
@@ -72,17 +70,14 @@ Q: "How many strikeouts does Freddy Peralta have?"
 Now convert: "{user_message}"
 Output only valid JSON.
 """
-        raw = self.llm_client.chat(
-            [
+        return llm_call_with_retry(
+            self.llm_client,
+            messages=[
                 {"role": "system", "content": "Output only valid JSON. No markdown."},
                 {"role": "user", "content": prompt},
             ],
             model="gpt-4o-mini",
         )
-        match = re.search(r"\{.*\}", raw, re.DOTALL)
-        if not match:
-            raise ValueError("No JSON in LLM response")
-        return json.loads(match.group(0))
 
     def _format_answer(self, user_message: str, spec: dict, data) -> str:
         prompt = f"""

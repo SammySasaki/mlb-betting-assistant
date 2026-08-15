@@ -6,6 +6,6 @@ class ILLMClient(ABC):
     """Abstract interface for any LLM provider."""
 
     @abstractmethod
-    def chat(self, messages: List[Dict[str, str]], model: str) -> str:
+    def chat(self, messages: List[Dict[str, str]], model: str = "gpt-4o-mini", temperature: float | None = None) -> str:
         """Send chat messages and return response text."""
         pass

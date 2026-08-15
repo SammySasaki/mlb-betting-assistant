@@ -27,7 +27,8 @@ class SQLAlchemyLineupRepository(ILineupRepository):
                 self.session.query(Lineups)
                 .filter(
                     Lineups.game_id == entry.game_id,
-                    Lineups.batting_order == entry.batting_order
+                    Lineups.batting_order == entry.batting_order,
+                    Lineups.team == entry.team,
                 )
                 .one_or_none()
             )
@@ -68,8 +69,8 @@ class SQLAlchemyLineupRepository(ILineupRepository):
             .join(Game, Lineups.game_id == Game.id)
             .filter(
                 Game.date == game_date,
-                or_(Game.home_team == team, Game.away_team == team)
+                Lineups.team == team,
             )
-            .order_by(Game.id.asc(), Lineups.batting_order.asc())
+            .order_by(Lineups.batting_order.asc())
             .all()
         )

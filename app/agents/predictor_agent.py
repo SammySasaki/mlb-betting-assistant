@@ -14,7 +14,7 @@ from infra.db.init_db import SessionLocal
 from sqlalchemy.orm import Session, joinedload
 from app.db.models import Player, PlayerGameStats, Game, Prediction
 from app.graph.state import GraphState
-from app.utils.utils import _extract_json
+from app.utils.utils import llm_call_with_retry
 from datetime import datetime
 import pytz
 from app.interfaces.illm_client import ILLMClient
@@ -136,37 +136,103 @@ class MLBPredictionAgent:
     def recs_to_str(self, recs):
         output = ""
         for r in recs:
-            output += f"Game: {r['home_team']} @ {r['away_team']}\n"
-            if r["market"] == "TOTAL":
+            home = r["home_team"]
+            away = r["away_team"]
+            market = r["market"]
+            output += f"[{market}] {away} @ {home}\n"
+            if market == "TOTAL":
                 output += f"  Predicted Total Runs: {r['predicted_total_runs']:.2f}\n"
-            elif r["market"] == "H2H":
-                output += f"  Home Win Prob: {r['home_win_prob']:.2f}\n"
-                output += f"  Away Win Prob: {r['away_win_prob']:.2f}\n"
-            output += f"  Recommendation: {r['recommendation']}\n"
+            elif market == "H2H":
+                output += f"  Home ({home}) Win Prob: {r['home_win_prob']:.2f}\n"
+                output += f"  Away ({away}) Win Prob: {r['away_win_prob']:.2f}\n"
+            rec_str = r["recommendation"]
+            rec_str = rec_str.replace("HOME", f"HOME ({home})").replace("AWAY", f"AWAY ({away})")
+            output += f"  Recommendation: {rec_str}\n"
             if r.get("edge") is not None:
                 output += f"  Edge: {r['edge']:.2f}\n"
             output += "\n"
         return output
 
 
-    def handle_request(self, state: GraphState):
-        """
-        End-to-end: natural language request -> JSON spec -> SQL -> DB results -> natural language answer.
-        """
+    def fetch_predictions(self, state: GraphState) -> GraphState:
+        """RICH_RECOMMENDATION path: fetch structured predictions into state, no output string."""
         user_message = state["input"]
-        # --- Step 1. Ask LLM to generate JSON spec ---
         spec_prompt = self._build_spec_prompt(user_message)
-        resp = self.openai_client.chat(
-            messages=[{"role": "system", "content": spec_prompt}]
+        spec = llm_call_with_retry(
+            self.openai_client,
+            messages=[{"role": "system", "content": spec_prompt}],
         )
-        spec = _extract_json(resp)
-        print(spec)
-        # # --- Step 2. Run the SQL query ---
         recs = self.spec_to_rec(spec)
+        return {**state, "predictions_data": recs}
 
-        # --- Step 3. Format results for user ---
+    def _build_context_block(self, preds: list, context: dict) -> str:
+        lines = []
+        for rec in preds:
+            gid = str(rec["game_id"])
+            home = rec["home_team"]
+            away = rec["away_team"]
+            lines.append(f"## {away} @ {home}  (HOME={home}, AWAY={away})")
+            rec_str = rec["recommendation"]
+            rec_str = rec_str.replace("HOME", f"HOME ({home})").replace("AWAY", f"AWAY ({away})")
+            lines.append(f"Market: {rec['market']}, Recommendation: {rec_str}")
+            if rec.get("predicted_total_runs") is not None:
+                lines.append(f"Predicted Total: {rec['predicted_total_runs']:.2f}, Edge: {rec.get('edge', 0) or 0:.3f}")
+            if rec.get("home_win_prob") is not None:
+                lines.append(f"Home Win Prob: {rec['home_win_prob']:.2f}, Away Win Prob: {rec['away_win_prob']:.2f}")
+            ctx = context.get(gid, {})
+            for side in ("home_team_stats", "away_team_stats"):
+                stats = ctx.get(side)
+                if stats:
+                    s = stats[0]
+                    lines.append(
+                        f"  {s['team']} last {s['last_n_games']}g: "
+                        f"AVG {s['batting_avg']}, {s['home_runs']} HR, {s['runs']} R"
+                    )
+            news = ctx.get("news", [])
+            if news:
+                lines.append("  News:")
+                for n in news:
+                    lines.append(f"    - {n}")
+            lines.append("")
+        return "\n".join(lines)
+
+    def synthesize_recommendation(self, state: GraphState) -> GraphState:
+        """RICH_RECOMMENDATION path: combine predictions + context into a narrative response."""
+        user_message = state["input"]
+        preds = state.get("predictions_data") or []
+        context = state.get("context_data") or {}
+
+        if not preds:
+            return {**state, "output": "No predictions found for today's games matching your request."}
+
+        context_block = self._build_context_block(preds, context)
+        synthesis_prompt = (
+            f'The user asked: "{user_message}"\n\n'
+            "Below are today's model predictions and supporting context. "
+            "Write a thorough, well-reasoned recommendation: explain the key factors "
+            "supporting each bet (model edge, recent offensive/pitching trends, relevant news). "
+            "Be direct about confidence. One section per game.\n\n"
+            f"{context_block}"
+        )
+        response = self.openai_client.chat(
+            messages=[
+                {"role": "system", "content": "You are an expert MLB betting analyst. Be analytical and specific."},
+                {"role": "user", "content": synthesis_prompt},
+            ],
+        )
+        return {**state, "output": response}
+
+    def handle_request(self, state: GraphState):
+        """RECOMMENDATION path: natural language request -> spec -> DB -> formatted string."""
+        user_message = state["input"]
+        spec_prompt = self._build_spec_prompt(user_message)
+        spec = llm_call_with_retry(
+            self.openai_client,
+            messages=[{"role": "system", "content": spec_prompt}],
+        )
+        recs = self.spec_to_rec(spec)
         output = self.recs_to_str(recs)
-        return {**state, "output": output }
+        return {**state, "output": output}
 
 if __name__ == "__main__":
     openai_client = OpenAILLMClient(api_key=os.getenv("OPENAI_API_KEY"))

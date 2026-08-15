@@ -5,7 +5,7 @@ from app.db.models import Base
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 
-engine = create_engine(DATABASE_URL)
+engine = create_engine(DATABASE_URL, connect_args={"client_encoding": "utf8"})
 SessionLocal = sessionmaker(bind=engine)
 
 def init_db():

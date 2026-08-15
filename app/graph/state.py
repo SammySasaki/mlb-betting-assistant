@@ -1,6 +1,8 @@
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 
 class GraphState(TypedDict, total=False):
-    input: str             # raw user message
-    intent: Optional[str]  # classifier decision (STAT, RECOMMENDATION, etc)
-    output: Optional[str]  # final agent response
+    input: str
+    intent: Optional[str]
+    output: Optional[str]
+    predictions_data: Optional[List[dict]]
+    context_data: Optional[dict]

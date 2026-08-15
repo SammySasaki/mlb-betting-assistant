@@ -115,3 +115,23 @@ def _extract_json(raw_text: str) -> dict:
     if not match:
         raise ValueError("No JSON found in LLM response")
     return json.loads(match.group(0))
+
+
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def llm_call_with_retry(llm_client, messages, model="gpt-4o-mini", max_retries=3, retry_delay=1.0) -> dict:
+    last_exc = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            raw = llm_client.chat(messages=messages, model=model)
+            return _extract_json(raw)
+        except Exception as exc:
+            last_exc = exc
+            logger.warning("llm_call_with_retry: attempt %d/%d failed: %s", attempt, max_retries, exc)
+            if attempt < max_retries:
+                time.sleep(retry_delay)
+    raise ValueError(f"LLM call failed after {max_retries} attempts. Last: {last_exc}") from last_exc

@@ -9,9 +9,9 @@ class OpenAILLMClient(ILLMClient):
     def __init__(self, api_key: str):
         self.client = OpenAI(api_key=api_key)
 
-    def chat(self, messages: List[Dict[str, str]], model: str = "gpt-4o-mini") -> str:
-        response = self.client.chat.completions.create(
-            model=model,
-            messages=messages
-        )
+    def chat(self, messages: List[Dict[str, str]], model: str = "gpt-4o-mini", temperature: float | None = None) -> str:
+        kwargs = {"model": model, "messages": messages}
+        if temperature is not None:
+            kwargs["temperature"] = temperature
+        response = self.client.chat.completions.create(**kwargs)
         return response.choices[0].message.content.strip()

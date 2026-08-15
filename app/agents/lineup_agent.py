@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date
 from app.graph.state import GraphState
 from app.interfaces.illm_client import ILLMClient
@@ -6,6 +7,9 @@ from app.interfaces.ilineup_repository import ILineupRepository
 from app.interfaces.iplayer_repository import IPlayerRepository
 from app.interfaces.igame_repository import IGameRepository
 from app.services.lineup_service import LineupService
+from app.utils.utils import llm_call_with_retry
+
+logger = logging.getLogger(__name__)
 
 class LineupAgent:
     def __init__(self, player_repository: IPlayerRepository, 
@@ -99,7 +103,10 @@ class LineupAgent:
         Parse the LLM JSON response and call get_lineups_by_date_by_team with appropriate filters.
         Further filter by defensive_position or batting_order if specified.
         """
-        spec = json.loads(llm_response)
+        try:
+            spec = json.loads(llm_response)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Failed to parse lineup spec JSON: {exc}") from exc
         print(spec)
         filters = spec.get("filters", {})
         defensive_position = filters.get("defensive_position", "")
@@ -156,19 +163,31 @@ class LineupAgent:
     def handle_request(self, state: GraphState):
         user_message = state["input"]
         prompt = self._build_prompt(user_message)
-        llm_response = self.llm_client.chat(
-            [
-                {"role": "system", "content": "You are a query translator that outputs ONLY valid JSON."},
-                {"role": "user", "content": prompt}
-            ],
-            model="gpt-4o-mini"
-        )
-        data = self._read_json(llm_response)
+        last_exc = None
+        data = None
+        for attempt in range(1, 4):
+            try:
+                spec_dict = llm_call_with_retry(
+                    self.llm_client,
+                    messages=[
+                        {"role": "system", "content": "You are a query translator that outputs ONLY valid JSON."},
+                        {"role": "user", "content": prompt},
+                    ],
+                    model="gpt-4o-mini",
+                )
+                llm_response = json.dumps(spec_dict)
+                data = self._read_json(llm_response)
+                break
+            except (ValueError, json.JSONDecodeError) as exc:
+                last_exc = exc
+                logger.warning("lineup spec attempt %d/3 failed: %s", attempt, exc)
+        if data is None:
+            return {**state, "output": f"Sorry, I couldn't parse the lineup query after several attempts."}
 
         answer = self.llm_client.chat(
             [
-                {"role": "system", "content": "You are a helpful MLB lineup assistant. Answer in plain conversational English."},
-                {"role": "user", "content": f'The user asked: "{user_message}"\nThe data returned: {data}\nWrite a concise natural language answer. If there is an error, explain it clearly.'}
+                {"role": "system", "content": "You are a helpful MLB lineup assistant. Answer in plain conversational English. Trust the data provided — it comes from an official real-time MLB source and is accurate. Do not second-guess player names or team assignments."},
+                {"role": "user", "content": f'The user asked: "{user_message}"\nThe data returned: {data}\nWrite a concise natural language answer. If the data list is empty, say the lineup is not yet available.'}
             ]
         )
         return {**state, "output": answer}

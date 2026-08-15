@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.graph.state import GraphState
 from app.interfaces.illm_client import ILLMClient
 from app.implementations.sqlalchemy_news_repository import SqlAlchemyNewsRepository
-from app.utils.utils import _extract_json
+from app.utils.utils import llm_call_with_retry
 
 
 class NewsAgent:
@@ -46,10 +46,10 @@ class NewsAgent:
     def handle_request(self, state: GraphState) -> GraphState:
         user_message = state["input"]
 
-        spec_raw = self.openai_client.chat(
-            messages=[{"role": "system", "content": self._build_spec_prompt(user_message)}]
+        spec = llm_call_with_retry(
+            self.openai_client,
+            messages=[{"role": "system", "content": self._build_spec_prompt(user_message)}],
         )
-        spec = _extract_json(spec_raw)
 
         teams = spec.get("teams") or []
         hours = int(spec.get("hours") or 24)

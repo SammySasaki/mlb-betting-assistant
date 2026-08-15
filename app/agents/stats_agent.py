@@ -5,10 +5,9 @@ from app.db.models import Game, Player, PlayerGameStats, Weather
 from app.services.at_bat_service import AtBatService
 import os
 from openai import OpenAI
-import json, re
 from infra.db.init_db import SessionLocal
 from app.graph.state import GraphState
-from app.utils.utils import _extract_json
+from app.utils.utils import llm_call_with_retry
 from app.interfaces.illm_client import ILLMClient
 from app.implementations.openai_client import OpenAILLMClient
 from app.services.stats_calculator import StatsCalculator
@@ -180,6 +179,30 @@ class StatsAgent:
         "limit": 5
         }}
 
+        Request: "How many runs per game did the Red Sox score in their last 5 road games?"
+        Response:
+        {{
+        "select": "runs_scored",
+        "filters": {{
+            "game_filters": {{"team": "Boston Red Sox", "away_team": "Boston Red Sox"}}
+        }},
+        "order_by": "date_desc",
+        "limit": 5,
+        "aggregate": "avg"
+        }}
+
+        Request: "How many runs per game did the Giants score in their last 5 home games?"
+        Response:
+        {{
+        "select": "runs_scored",
+        "filters": {{
+            "game_filters": {{"team": "San Francisco Giants", "home_team": "San Francisco Giants"}}
+        }},
+        "order_by": "date_desc",
+        "limit": 5,
+        "aggregate": "avg"
+        }}
+
         Request: "How many total runs have the Giants scored in the last 3 games against the dodgers"
         Response:
         {{
@@ -265,13 +288,6 @@ class StatsAgent:
         Write a natural language response summarizing the answer clearly.
         """
     
-    def _extract_json(self, raw_text: str) -> dict:
-        # Strip markdown or text around JSON
-        match = re.search(r"\{.*\}", raw_text, re.DOTALL)
-        if not match:
-            raise ValueError("No JSON found in LLM response")
-        return json.loads(match.group(0))
-
     def get_player_id(self, name: str) -> int:
             """Fetch the ID from the Player table using the player's name."""
             player = self.db_session.query(Player).filter(Player.name == name).first()
@@ -294,8 +310,27 @@ class StatsAgent:
         joins = set()
         columns = []
 
-        # Extract team filter early (for computed aliases)
-        team_name = filters.get("game_filters", {}).get("team")
+        # Normalize game_filters: if the LLM set both home_team and away_team to the same
+        # team (common for road/home game queries), replace home_team with the generic
+        # "team" key so the OR condition fires and team_name resolves correctly.
+        game_f = dict(filters.get("game_filters", {}))
+        if (
+            "team" not in game_f
+            and game_f.get("home_team") is not None
+            and game_f.get("home_team") == game_f.get("away_team")
+        ):
+            team_val = game_f.pop("home_team")
+            game_f["team"] = team_val
+            filters = {**filters, "game_filters": game_f}
+
+        # Extract team_name for computed aliases (runs_scored / opponent_runs).
+        # Prefer the generic "team" key; fall back to direct column filters.
+        game_filters_raw = filters.get("game_filters", {})
+        team_name = (
+            game_filters_raw.get("team")
+            or game_filters_raw.get("away_team")
+            or game_filters_raw.get("home_team")
+        )
 
         # --- Computed Aliases ---
         alias_map = {
@@ -457,33 +492,49 @@ class StatsAgent:
         """
         End-to-end: natural language request -> JSON spec -> SQL -> DB results -> natural language answer.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+
         user_message = state["input"]
-        # --- Step 1. Ask LLM to generate JSON spec ---
         prompt = self._build_spec_prompt(user_message)
-        spec_resp = self.openai_client.chat(
-            [
-                {"role": "system", "content": "You are a query translator that outputs ONLY valid JSON."},
-                {"role": "user","content": prompt}
-            ],
-            model="gpt-4o-mini"
-        )
-        
-        spec = _extract_json(spec_resp)
+        messages = [
+            {"role": "system", "content": "You are a query translator that outputs ONLY valid JSON."},
+            {"role": "user", "content": prompt},
+        ]
 
-        # If calculating a rate stat across multiple players, name must be
-        # in the select so GROUP BY and result labelling work correctly.
-        if spec.get("calculate") and not spec.get("filters", {}).get("player_filters", {}).get("name"):
-            selects = spec.get("select", [])
-            if isinstance(selects, str):
-                selects = [selects]
-            if "name" not in selects:
-                selects.append("name")
-            spec["select"] = selects
+        spec = None
+        query = None
+        last_exc = None
+        for attempt in range(1, 4):
+            try:
+                spec = llm_call_with_retry(self.openai_client, messages=messages, model=self.model, max_retries=1)
 
-        if "select" in spec and isinstance(spec["select"], list):
-            spec["select"].sort()
+                # If calculating a rate stat across multiple players, name must be
+                # in the select so GROUP BY and result labelling work correctly.
+                if spec.get("calculate") and not spec.get("filters", {}).get("player_filters", {}).get("name"):
+                    selects = spec.get("select", [])
+                    if isinstance(selects, str):
+                        selects = [selects]
+                    if "name" not in selects:
+                        selects.append("name")
+                    spec["select"] = selects
+
+                if "select" in spec and isinstance(spec["select"], list):
+                    spec["select"].sort()
+
+                query = self.spec_to_query(spec)
+                break
+            except ValueError as exc:
+                last_exc = exc
+                logger.warning("stats spec/query attempt %d/3 failed: %s", attempt, exc)
+        else:
+            return {**state, "output": (
+                "I wasn't able to answer that one - it may involve a stat or filter I don't support yet. "
+                "Try asking about recent game results, runs per game, batting averages, ERA, home runs, "
+                "or head-to-head matchups."
+            )}
+
         print(spec)
-
         filters = spec.get("filters", {})
         at_bat_filters = filters.get("at_bat_filters")
         if at_bat_filters:
@@ -497,26 +548,16 @@ class StatsAgent:
             opponent_id = self.get_player_id(opponent_name)
             season = filters.get("game_filters", {}).get("season_year", None)
 
-            print(
-                f"[DEBUG] get_matchup_stats call → "
-                f"player_name={player_name}, player_id={player_id}, "
-                f"position={position}, opponent_name={opponent_name}, opponent_id={opponent_id}, "
-                f"season={season}, limit={limit}, select_fields={select_fields}, aggregate={aggregate}"
-            )
-
-            # Redirect out to external service
-            results =  self.atbat_service.get_matchup_stats(
+            results = self.atbat_service.get_matchup_stats(
                 player_id=player_id,
                 position=position,
                 opponent_id=opponent_id,
                 limit=limit,
                 season=season,
                 select_fields=select_fields,
-                aggregate=aggregate
+                aggregate=aggregate,
             )
-        else: 
-            # # --- Step 2. Run the SQL query ---
-            query = self.spec_to_query(spec)
+        else:
             results = query.all()
         print(f"raw results: {results}")
         calculate = spec.get("calculate")

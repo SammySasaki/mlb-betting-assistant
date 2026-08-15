@@ -94,6 +94,7 @@ class LineupService:
                     entry = Lineups(
                         game_id=game_id,
                         player_id=player_id,
+                        team=team_name,
                         batting_order=int(batting_order) if batting_order else None,
                         defensive_position=position,
                         avg_season=self._safe_div(season_totals.get("hits", 0), season_totals.get("at_bats", 0)),
